@@ -3,3 +3,6 @@ from src.exceptions.security import (
     InvalidTokenError,
     TokenExpiredError
 )
+from src.exceptions.email import (
+    BaseEmailError,
+)
