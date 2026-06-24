@@ -20,6 +20,7 @@ from src.schemas.accounts import (
     MessageResponseSchema,
     UserActivationRequestSchema,
     PasswordResetRequestSchema,
+    PasswordResetCompleteRequestSchema,
 )
 from src.notifications.interfaces import EmailSenderInterface
 
@@ -197,4 +198,81 @@ class AccountsService:
                 "If you are registered, "
                 "you will receive an email with instructions."
             )
+        )
+
+    @staticmethod
+    async def reset_password(
+            data: PasswordResetCompleteRequestSchema,
+            db: AsyncSession,
+            email_sender: EmailSenderInterface,
+    ) -> MessageResponseSchema:
+
+        stmt = select(UserModel).filter_by(email=data.email)
+
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+
+        if not user or not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid email or token.",
+            )
+
+        stmt = select(PasswordResetTokenModel).filter_by(
+            user_id=user.id
+        )
+
+        result = await db.execute(stmt)
+        token_record = result.scalars().first()
+
+        if not token_record or token_record.token != data.token:
+            if token_record:
+                await db.delete(token_record)
+                await db.commit()
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid email or token.",
+            )
+
+        expires_at = cast(
+            datetime,
+            token_record.expires_at
+        ).replace(tzinfo=timezone.utc)
+
+        if expires_at < datetime.now(timezone.utc):
+            await db.delete(token_record)
+            await db.commit()
+
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid email or token.",
+            )
+
+        try:
+            user.password = data.password
+
+            await db.delete(token_record)
+
+            await db.commit()
+
+        except SQLAlchemyError:
+            await db.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=(
+                    "An error occurred while resetting the password."
+                ),
+            )
+
+        login_link = "http://127.0.0.1/accounts/login/"
+
+        await email_sender.send_password_reset_complete_email(
+            str(data.email),
+            login_link,
+        )
+
+        return MessageResponseSchema(
+            message="Password reset successfully."
         )
