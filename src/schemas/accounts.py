@@ -79,3 +79,7 @@ class ChangePasswordRequestSchema(BaseModel):
 
 class LogoutRequestSchema(BaseModel):
     refresh_token: str
+
+
+class ResendActivationRequestSchema(BaseModel):
+    email: EmailStr

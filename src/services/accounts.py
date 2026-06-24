@@ -472,3 +472,60 @@ class AccountsService:
         return MessageResponseSchema(
             message="Logged out successfully."
         )
+
+    @staticmethod
+    async def resend_activation_token(
+            data: ResendActivationRequestSchema,
+            db: AsyncSession,
+            email_sender: EmailSenderInterface,
+    ) -> MessageResponseSchema:
+
+        stmt = select(UserModel).where(
+            UserModel.email == data.email
+        )
+
+        result = await db.execute(stmt)
+
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found."
+            )
+
+        if user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User already activated."
+            )
+
+        await db.execute(
+            delete(ActivationTokenModel).where(
+                ActivationTokenModel.user_id == user.id
+            )
+        )
+
+        activation_token = ActivationTokenModel(
+            user_id=user.id
+        )
+
+        db.add(activation_token)
+
+        await db.commit()
+        await db.refresh(activation_token)
+
+        activation_link = (
+            f"http://127.0.0.1:8000/accounts/activate/"
+            f"?email={user.email}"
+            f"&token={activation_token.token}"
+        )
+
+        await email_sender.send_activation_email(
+            user.email,
+            activation_link,
+        )
+
+        return MessageResponseSchema(
+            message="Activation email sent."
+        )

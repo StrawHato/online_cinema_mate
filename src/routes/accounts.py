@@ -171,3 +171,21 @@ async def logout(
         token_data=data,
         db=db,
     )
+
+
+@router.post(
+    "/activation/resend/",
+    response_model=MessageResponseSchema,
+)
+async def resend_activation_token(
+    data: ResendActivationRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    email_sender: EmailSenderInterface = Depends(
+        get_accounts_email_notificator
+    ),
+):
+    return await AccountsService.resend_activation_token(
+        data=data,
+        db=db,
+        email_sender=email_sender,
+    )
