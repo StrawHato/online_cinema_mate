@@ -24,3 +24,13 @@ class BaseEmailPasswordSchema(BaseModel):
 
 class UserRegistrationRequestSchema(BaseEmailPasswordSchema):
     pass
+
+
+class UserRegistrationResponseSchema(BaseModel):
+    id: int
+    email: EmailStr
+    is_active: bool
+
+    model_config = {
+        "from_attributes": True
+    }
