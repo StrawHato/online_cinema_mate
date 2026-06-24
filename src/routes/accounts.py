@@ -7,6 +7,8 @@ from src.config.dependencies import (
 from src.database.session import get_db
 from src.notifications.interfaces import EmailSenderInterface
 from src.schemas.accounts import (
+    MessageResponseSchema,
+    UserActivationRequestSchema,
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
 )
@@ -29,6 +31,24 @@ async def register_user(
 ) -> UserRegistrationResponseSchema:
     return await AccountsService.register(
         user_data=user_data,
+        db=db,
+        email_sender=email_sender,
+    )
+
+
+@router.post(
+    "/activate/",
+    response_model=MessageResponseSchema,
+)
+async def activate_account(
+    activation_data: UserActivationRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    email_sender: EmailSenderInterface = Depends(
+        get_accounts_email_notificator
+    ),
+) -> MessageResponseSchema:
+    return await AccountsService.activate(
+        activation_data=activation_data,
         db=db,
         email_sender=email_sender,
     )
