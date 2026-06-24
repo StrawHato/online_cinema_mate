@@ -1,15 +1,15 @@
+import asyncio
 from datetime import datetime, timezone
 
 from sqlalchemy import delete
 
-from src.celery_app import celery_app
+from celery import shared_task
 from src.database.session import AsyncSessionLocal
 from src.database.models.accounts import ActivationTokenModel, PasswordResetTokenModel
 
 
-@celery_app.task
+@shared_task
 def cleanup_expired_activation_tokens():
-    import asyncio
     asyncio.run(_cleanup())
 
 
@@ -24,9 +24,8 @@ async def _cleanup():
         await db.commit()
 
 
-@celery_app.task
+@shared_task
 def cleanup_expired_password_reset_tokens():
-    import asyncio
     asyncio.run(_cleanup_reset())
 
 
