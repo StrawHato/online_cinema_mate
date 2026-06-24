@@ -49,3 +49,7 @@ class UserLoginResponseSchema(BaseModel):
 class UserActivationRequestSchema(BaseModel):
     email: EmailStr
     token: str
+
+
+class PasswordResetRequestSchema(BaseModel):
+    email: EmailStr
