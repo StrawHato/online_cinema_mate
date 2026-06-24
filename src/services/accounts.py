@@ -444,3 +444,31 @@ class AccountsService:
         return MessageResponseSchema(
             message="Password changed successfully."
         )
+
+    @staticmethod
+    async def logout(
+            token_data: LogoutRequestSchema,
+            db: AsyncSession,
+    ) -> MessageResponseSchema:
+
+        stmt = select(RefreshTokenModel).where(
+            RefreshTokenModel.token == token_data.refresh_token
+        )
+
+        result = await db.execute(stmt)
+
+        refresh_token = result.scalar_one_or_none()
+
+        if not refresh_token:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Refresh token not found."
+            )
+
+        await db.delete(refresh_token)
+
+        await db.commit()
+
+        return MessageResponseSchema(
+            message="Logged out successfully."
+        )

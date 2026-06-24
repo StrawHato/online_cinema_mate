@@ -157,3 +157,17 @@ async def change_password(
         data=data,
         db=db,
     )
+
+
+@router.post(
+    "/logout/",
+    response_model=MessageResponseSchema,
+)
+async def logout(
+    data: LogoutRequestSchema,
+    db: AsyncSession = Depends(get_db),
+):
+    return await AccountsService.logout(
+        token_data=data,
+        db=db,
+    )

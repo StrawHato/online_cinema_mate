@@ -75,3 +75,7 @@ class MessageResponseSchema(BaseModel):
 class ChangePasswordRequestSchema(BaseModel):
     old_password: str
     new_password: str
+
+
+class LogoutRequestSchema(BaseModel):
+    refresh_token: str
