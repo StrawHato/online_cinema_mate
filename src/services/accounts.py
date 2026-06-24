@@ -16,6 +16,7 @@ from src.database.models.accounts import (
     RefreshTokenModel,
 )
 from src.config.settings import Settings
+from src.exceptions import BaseSecurityError
 from src.schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
@@ -25,6 +26,8 @@ from src.schemas.accounts import (
     PasswordResetCompleteRequestSchema,
     UserLoginRequestSchema,
     UserLoginResponseSchema,
+    TokenRefreshRequestSchema,
+    TokenRefreshResponseSchema,
 )
 from src.notifications.interfaces import EmailSenderInterface
 from src.security.interfaces import JWTAuthManagerInterface
@@ -344,4 +347,63 @@ class AccountsService:
         return UserLoginResponseSchema(
             access_token=jwt_access_token,
             refresh_token=jwt_refresh_token,
+        )
+
+    @staticmethod
+    async def refresh_access_token(
+            token_data: TokenRefreshRequestSchema,
+            db: AsyncSession,
+            jwt_manager: JWTAuthManagerInterface,
+    ) -> TokenRefreshResponseSchema:
+
+        try:
+            decoded_token = jwt_manager.decode_refresh_token(
+                token_data.refresh_token
+            )
+
+            user_id = decoded_token.get("user_id")
+
+        except BaseSecurityError as error:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(error),
+            )
+
+        stmt = select(RefreshTokenModel).filter_by(
+            token=token_data.refresh_token
+        )
+
+        result = await db.execute(stmt)
+
+        refresh_token_record = result.scalars().first()
+
+        if not refresh_token_record:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Refresh token not found.",
+            )
+
+        stmt = select(UserModel).filter_by(id=user_id)
+
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found.",
+            )
+
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is not activated.",
+            )
+
+        new_access_token = jwt_manager.create_access_token(
+            {"user_id": user_id}
+        )
+
+        return TokenRefreshResponseSchema(
+            access_token=new_access_token
         )
