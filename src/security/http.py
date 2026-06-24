@@ -1,13 +1,20 @@
 from fastapi import Depends, HTTPException, status
+from fastapi.security import (
+    HTTPAuthorizationCredentials,
+    HTTPBearer,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.orm import joinedload
 
-from src.database.models.accounts import UserModel
-from src.database.session import get_db
 from src.config.dependencies import get_jwt_auth_manager
-from src.security.interfaces import JWTAuthManagerInterface
+from src.database.models.accounts import (
+    UserGroupEnum,
+    UserModel,
+)
+from src.database.session import get_db
 from src.exceptions import BaseSecurityError
+from src.security.interfaces import JWTAuthManagerInterface
 
 bearer_scheme = HTTPBearer()
 
@@ -37,8 +44,14 @@ async def get_current_user(
             detail=str(error),
         )
 
-    stmt = select(UserModel).where(
-        UserModel.id == user_id
+    stmt = (
+        select(UserModel)
+        .options(
+            joinedload(UserModel.group)
+        )
+        .where(
+            UserModel.id == user_id
+        )
     )
 
     result = await db.execute(stmt)
@@ -58,3 +71,38 @@ async def get_current_user(
         )
 
     return user
+
+
+async def get_current_admin(
+    current_user: UserModel = Depends(
+        get_current_user
+    ),
+) -> UserModel:
+
+    if not current_user.has_group(
+        UserGroupEnum.ADMIN
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin permissions required.",
+        )
+
+    return current_user
+
+
+async def get_current_moderator(
+    current_user: UserModel = Depends(
+        get_current_user
+    ),
+) -> UserModel:
+
+    if current_user.group.name not in (
+        UserGroupEnum.ADMIN,
+        UserGroupEnum.MODERATOR,
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator permissions required.",
+        )
+
+    return current_user
