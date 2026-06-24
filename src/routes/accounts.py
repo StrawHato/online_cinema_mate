@@ -12,6 +12,8 @@ from src.schemas.accounts import (
     MessageResponseSchema,
     PasswordResetCompleteRequestSchema,
     PasswordResetRequestSchema,
+    TokenRefreshRequestSchema,
+    TokenRefreshResponseSchema,
     UserActivationRequestSchema,
     UserLoginRequestSchema,
     UserLoginResponseSchema,
@@ -114,5 +116,23 @@ async def login_user(
         login_data=login_data,
         db=db,
         settings=settings,
+        jwt_manager=jwt_manager,
+    )
+
+
+@router.post(
+    "/refresh/",
+    response_model=TokenRefreshResponseSchema,
+)
+async def refresh_access_token(
+    token_data: TokenRefreshRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    jwt_manager: JWTAuthManagerInterface = Depends(
+        get_jwt_auth_manager
+    ),
+) -> TokenRefreshResponseSchema:
+    return await AccountsService.refresh_access_token(
+        token_data=token_data,
+        db=db,
         jwt_manager=jwt_manager,
     )
