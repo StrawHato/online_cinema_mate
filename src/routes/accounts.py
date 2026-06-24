@@ -39,14 +39,10 @@ router = APIRouter(prefix="/accounts", tags=["Accounts"])
 async def register_user(
     user_data: UserRegistrationRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(
-        get_accounts_email_notificator
-    ),
 ) -> UserRegistrationResponseSchema:
     return await AccountsService.register(
         user_data=user_data,
         db=db,
-        email_sender=email_sender,
     )
 
 
@@ -57,14 +53,10 @@ async def register_user(
 async def activate_account(
     activation_data: UserActivationRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(
-        get_accounts_email_notificator
-    ),
 ) -> MessageResponseSchema:
     return await AccountsService.activate(
         activation_data=activation_data,
-        db=db,
-        email_sender=email_sender,
+        db=db
     )
 
 
@@ -75,14 +67,10 @@ async def activate_account(
 async def request_password_reset_token(
     data: PasswordResetRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(
-        get_accounts_email_notificator
-    ),
 ) -> MessageResponseSchema:
     return await AccountsService.request_password_reset(
         data=data,
         db=db,
-        email_sender=email_sender,
     )
 
 
@@ -93,14 +81,10 @@ async def request_password_reset_token(
 async def reset_password(
     data: PasswordResetCompleteRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(
-        get_accounts_email_notificator
-    ),
 ) -> MessageResponseSchema:
     return await AccountsService.reset_password(
         data=data,
         db=db,
-        email_sender=email_sender,
     )
 
 
@@ -180,12 +164,8 @@ async def logout(
 async def resend_activation_token(
     data: ResendActivationRequestSchema,
     db: AsyncSession = Depends(get_db),
-    email_sender: EmailSenderInterface = Depends(
-        get_accounts_email_notificator
-    ),
 ):
     return await AccountsService.resend_activation_token(
         data=data,
         db=db,
-        email_sender=email_sender,
     )

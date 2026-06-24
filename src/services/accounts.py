@@ -36,7 +36,6 @@ from src.tasks.emails import (
     send_activation_email_task, send_activation_complete_email_task, send_password_reset_email_task,
     send_password_reset_complete_email_task
 )
-from src.notifications.interfaces import EmailSenderInterface
 from src.security.interfaces import JWTAuthManagerInterface
 
 
@@ -45,7 +44,6 @@ class AccountsService:
     async def register(
         user_data: UserRegistrationRequestSchema,
         db: AsyncSession,
-        email_sender: EmailSenderInterface,
     ) -> UserRegistrationResponseSchema:
 
         stmt = select(UserModel).where(UserModel.email == user_data.email)
@@ -111,7 +109,6 @@ class AccountsService:
     async def activate(
             activation_data: UserActivationRequestSchema,
             db: AsyncSession,
-            email_sender: EmailSenderInterface,
     ) -> MessageResponseSchema:
 
         stmt = (
@@ -172,7 +169,6 @@ class AccountsService:
     async def request_password_reset(
             data: PasswordResetRequestSchema,
             db: AsyncSession,
-            email_sender: EmailSenderInterface,
     ) -> MessageResponseSchema:
 
         stmt = select(UserModel).filter_by(email=data.email)
@@ -223,7 +219,6 @@ class AccountsService:
     async def reset_password(
             data: PasswordResetCompleteRequestSchema,
             db: AsyncSession,
-            email_sender: EmailSenderInterface,
     ) -> MessageResponseSchema:
 
         stmt = select(UserModel).filter_by(email=data.email)
@@ -485,7 +480,6 @@ class AccountsService:
     async def resend_activation_token(
             data: ResendActivationRequestSchema,
             db: AsyncSession,
-            email_sender: EmailSenderInterface,
     ) -> MessageResponseSchema:
 
         stmt = select(UserModel).where(
