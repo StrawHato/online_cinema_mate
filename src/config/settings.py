@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///online_cinema.db"
+    LOGIN_TIME_DAYS: int = 7
 
     BASE_DIR: Path = Path(__file__).parent.parent
 
