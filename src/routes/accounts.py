@@ -8,6 +8,7 @@ from src.database.session import get_db
 from src.notifications.interfaces import EmailSenderInterface
 from src.schemas.accounts import (
     MessageResponseSchema,
+    PasswordResetCompleteRequestSchema,
     PasswordResetRequestSchema,
     UserActivationRequestSchema,
     UserRegistrationRequestSchema,
@@ -67,6 +68,24 @@ async def request_password_reset_token(
     ),
 ) -> MessageResponseSchema:
     return await AccountsService.request_password_reset(
+        data=data,
+        db=db,
+        email_sender=email_sender,
+    )
+
+
+@router.post(
+    "/reset-password/complete/",
+    response_model=MessageResponseSchema,
+)
+async def reset_password(
+    data: PasswordResetCompleteRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    email_sender: EmailSenderInterface = Depends(
+        get_accounts_email_notificator
+    ),
+) -> MessageResponseSchema:
+    return await AccountsService.reset_password(
         data=data,
         db=db,
         email_sender=email_sender,
