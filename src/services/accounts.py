@@ -32,6 +32,10 @@ from src.schemas.accounts import (
     LogoutRequestSchema,
     ResendActivationRequestSchema,
 )
+from src.tasks.emails import (
+    send_activation_email_task, send_activation_complete_email_task, send_password_reset_email_task,
+    send_password_reset_complete_email_task
+)
 from src.notifications.interfaces import EmailSenderInterface
 from src.security.interfaces import JWTAuthManagerInterface
 
@@ -91,11 +95,14 @@ class AccountsService:
                 detail="An error occurred during user creation."
             ) from e
 
-        activation_link = "http://127.0.0.1/accounts/activate/"
+        activation_link = (
+            f"http://127.0.0.1:8000/api/v1/accounts/activate/"
+            f"{activation_token.token}"
+        )
 
-        await email_sender.send_activation_email(
+        send_activation_email_task.delay(
             new_user.email,
-            activation_link
+            activation_link,
         )
 
         return UserRegistrationResponseSchema.model_validate(new_user)
@@ -150,9 +157,9 @@ class AccountsService:
         await db.delete(token_record)
         await db.commit()
 
-        login_link = "http://127.0.0.1/accounts/login/"
+        login_link = "http://127.0.0.1/api/v1/accounts/login/"
 
-        await email_sender.send_activation_complete_email(
+        send_activation_complete_email_task.delay(
             str(activation_data.email),
             login_link,
         )
@@ -196,10 +203,11 @@ class AccountsService:
         await db.commit()
 
         reset_link = (
-            "http://127.0.0.1/accounts/password-reset-complete/"
+            f"http://127.0.0.1:8000/api/v1/accounts/reset-password/complete/"
+            f"?token={reset_token.token}"
         )
 
-        await email_sender.send_password_reset_email(
+        send_password_reset_email_task.delay(
             str(data.email),
             reset_link,
         )
@@ -277,9 +285,9 @@ class AccountsService:
                 ),
             )
 
-        login_link = "http://127.0.0.1/accounts/login/"
+        login_link = "http://127.0.0.1:8000/api/v1/accounts/login/"
 
-        await email_sender.send_password_reset_complete_email(
+        send_password_reset_complete_email_task.delay(
             str(data.email),
             login_link,
         )
@@ -517,11 +525,10 @@ class AccountsService:
 
         activation_link = (
             f"http://127.0.0.1:8000/accounts/activate/"
-            f"?email={user.email}"
-            f"&token={activation_token.token}"
+            f"{activation_token.token}"
         )
 
-        await email_sender.send_activation_email(
+        send_activation_email_task.delay(
             user.email,
             activation_link,
         )
