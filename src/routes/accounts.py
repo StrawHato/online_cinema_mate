@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.models.accounts import UserModel
+from security.http import get_current_user
 from src.config.dependencies import (
     get_accounts_email_notificator,
     get_jwt_auth_manager,
@@ -19,6 +21,9 @@ from src.schemas.accounts import (
     UserLoginResponseSchema,
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
+    ChangePasswordRequestSchema,
+    LogoutRequestSchema,
+    ResendActivationRequestSchema,
 )
 from src.security.interfaces import JWTAuthManagerInterface
 from src.services.accounts import AccountsService
@@ -135,4 +140,20 @@ async def refresh_access_token(
         token_data=token_data,
         db=db,
         jwt_manager=jwt_manager,
+    )
+
+
+@router.post(
+    "/change-password/",
+    response_model=MessageResponseSchema,
+)
+async def change_password(
+    data: ChangePasswordRequestSchema,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await AccountsService.change_password(
+        user_id=current_user.id,
+        data=data,
+        db=db,
     )
