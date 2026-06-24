@@ -70,3 +70,8 @@ class TokenRefreshResponseSchema(BaseModel):
 
 class MessageResponseSchema(BaseModel):
     message: str
+
+
+class ChangePasswordRequestSchema(BaseModel):
+    old_password: str
+    new_password: str
