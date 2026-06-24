@@ -13,7 +13,9 @@ from src.database.models.accounts import (
     UserGroupEnum,
     ActivationTokenModel,
     PasswordResetTokenModel,
+    RefreshTokenModel,
 )
+from src.config.settings import Settings
 from src.schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
@@ -21,8 +23,11 @@ from src.schemas.accounts import (
     UserActivationRequestSchema,
     PasswordResetRequestSchema,
     PasswordResetCompleteRequestSchema,
+    UserLoginRequestSchema,
+    UserLoginResponseSchema,
 )
 from src.notifications.interfaces import EmailSenderInterface
+from src.security.interfaces import JWTAuthManagerInterface
 
 
 class AccountsService:
@@ -275,4 +280,68 @@ class AccountsService:
 
         return MessageResponseSchema(
             message="Password reset successfully."
+        )
+
+    @staticmethod
+    async def login(
+            login_data: UserLoginRequestSchema,
+            db: AsyncSession,
+            settings: Settings,
+            jwt_manager: JWTAuthManagerInterface,
+    ) -> UserLoginResponseSchema:
+
+        stmt = select(UserModel).filter_by(
+            email=login_data.email
+        )
+
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+
+        if not user or not user.verify_password(
+                login_data.password
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password.",
+            )
+
+        if not user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is not activated.",
+            )
+
+        jwt_refresh_token = jwt_manager.create_refresh_token(
+            {"user_id": user.id}
+        )
+
+        try:
+            refresh_token = RefreshTokenModel.create(
+                user_id=user.id,
+                days_valid=settings.LOGIN_TIME_DAYS,
+                token=jwt_refresh_token,
+            )
+
+            db.add(refresh_token)
+
+            await db.flush()
+            await db.commit()
+
+        except SQLAlchemyError:
+            await db.rollback()
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=(
+                    "An error occurred while processing the request."
+                ),
+            )
+
+        jwt_access_token = jwt_manager.create_access_token(
+            {"user_id": user.id}
+        )
+
+        return UserLoginResponseSchema(
+            access_token=jwt_access_token,
+            refresh_token=jwt_refresh_token,
         )
