@@ -44,3 +44,8 @@ class UserLoginResponseSchema(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+
+
+class UserActivationRequestSchema(BaseModel):
+    email: EmailStr
+    token: str
