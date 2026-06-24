@@ -2,7 +2,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -19,18 +19,23 @@ class Settings(BaseSettings):
     PASSWORD_RESET_TEMPLATE_NAME: str = "password_reset_request.html"
     PASSWORD_RESET_COMPLETE_TEMPLATE_NAME: str = "password_reset_complete.html"
 
-    EMAIL_HOST: str = os.getenv("EMAIL_HOST")
-    EMAIL_PORT: int = os.getenv("EMAIL_PORT")
-    EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER")
-    EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD")
-    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS").lower() == "true"
+    EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
+    EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
+    EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "testuser")
+    EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "test_password")
+    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
 
-    SECRET_KEY_ACCESS: str = os.getenv("SECRET_KEY_ACCESS")
-    SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH")
+    SECRET_KEY_ACCESS: str
+    SECRET_KEY_REFRESH: str
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
 
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        extra="ignore",
+    )
 
     @property
     def REDIS_URL(self) -> str:
