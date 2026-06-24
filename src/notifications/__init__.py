@@ -1,0 +1,1 @@
+from src.notifications.interfaces import EmailSenderInterface
