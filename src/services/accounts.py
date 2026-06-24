@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import cast
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -12,12 +12,14 @@ from src.database.models.accounts import (
     UserGroupModel,
     UserGroupEnum,
     ActivationTokenModel,
+    PasswordResetTokenModel,
 )
 from src.schemas.accounts import (
     UserRegistrationRequestSchema,
     UserRegistrationResponseSchema,
     MessageResponseSchema,
     UserActivationRequestSchema,
+    PasswordResetRequestSchema,
 )
 from src.notifications.interfaces import EmailSenderInterface
 
@@ -145,4 +147,54 @@ class AccountsService:
 
         return MessageResponseSchema(
             message="User account activated successfully."
+        )
+
+    @staticmethod
+    async def request_password_reset(
+            data: PasswordResetRequestSchema,
+            db: AsyncSession,
+            email_sender: EmailSenderInterface,
+    ) -> MessageResponseSchema:
+
+        stmt = select(UserModel).filter_by(email=data.email)
+        result = await db.execute(stmt)
+
+        user = result.scalars().first()
+
+        if not user or not user.is_active:
+            return MessageResponseSchema(
+                message=(
+                    "If you are registered, "
+                    "you will receive an email with instructions."
+                )
+            )
+
+        await db.execute(
+            delete(PasswordResetTokenModel).where(
+                PasswordResetTokenModel.user_id == user.id
+            )
+        )
+
+        reset_token = PasswordResetTokenModel(
+            user_id=cast(int, user.id)
+        )
+
+        db.add(reset_token)
+
+        await db.commit()
+
+        reset_link = (
+            "http://127.0.0.1/accounts/password-reset-complete/"
+        )
+
+        await email_sender.send_password_reset_email(
+            str(data.email),
+            reset_link,
+        )
+
+        return MessageResponseSchema(
+            message=(
+                "If you are registered, "
+                "you will receive an email with instructions."
+            )
         )
