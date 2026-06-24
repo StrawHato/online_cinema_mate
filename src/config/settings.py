@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     SECRET_KEY_REFRESH: str = os.getenv("SECRET_KEY_REFRESH")
     JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
 
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+
+    @property
+    def REDIS_URL(self) -> str:
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+
 
 @lru_cache
 def get_settings() -> Settings:
