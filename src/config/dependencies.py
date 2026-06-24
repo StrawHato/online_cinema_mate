@@ -1,7 +1,7 @@
 from functools import lru_cache
 
-from notifications import EmailSenderInterface
-from notifications.emails import EmailSender
+from src.notifications import EmailSenderInterface
+from src.notifications.emails import EmailSender
 from src.config.settings import get_settings
 from src.security.interfaces import JWTAuthManagerInterface
 from src.security.token_manager import JWTAuthManager

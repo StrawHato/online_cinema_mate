@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.accounts import UserModel
-from security.http import get_current_user
+from src.database.models.accounts import UserModel
+from src.security.http import get_current_user
 from src.config.dependencies import (
     get_accounts_email_notificator,
     get_jwt_auth_manager,
