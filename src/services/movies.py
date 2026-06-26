@@ -122,7 +122,7 @@ class MovieService:
         return movie_directors
 
     @staticmethod
-    async def create(
+    async def create_movie(
             movie_data: MovieCreateRequestSchema,
             db: AsyncSession = Depends(get_db),
     ) -> MovieResponseSchema:
