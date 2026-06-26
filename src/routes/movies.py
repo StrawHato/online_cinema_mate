@@ -1,14 +1,18 @@
+from decimal import Decimal
+
 from fastapi import (
     APIRouter,
     Depends,
-    status,
+    status, Query,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.models.movies import MovieSortEnum
 from src.database.session import get_db
 from src.schemas.movies import (
     MovieCreateRequestSchema,
     MovieResponseSchema,
+    MovieListResponseSchema,
 )
 from src.security.http import get_current_admin
 from src.database.models.accounts import UserModel
@@ -58,4 +62,38 @@ async def get_movie(
     return await MovieService.get_movie(
         db=db,
         movie_uuid=movie_uuid,
+    )
+
+
+@router.get(
+    "/",
+    response_model=MovieListResponseSchema,
+    summary="Movie catalog",
+)
+async def get_movies(
+    db: AsyncSession = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=20),
+    search: str | None = None,
+    genre: str | None = None,
+    director: str | None = None,
+    star: str | None = None,
+    year: int | None = None,
+    imdb_min: Decimal | None = None,
+    imdb_max: Decimal | None = None,
+    sort: MovieSortEnum = MovieSortEnum.NAME_ASC,
+) -> MovieListResponseSchema:
+
+    return await MovieService.get_movies(
+        db=db,
+        page=page,
+        page_size=page_size,
+        search=search,
+        genre=genre,
+        director=director,
+        star=star,
+        year=year,
+        imdb_min=imdb_min,
+        imdb_max=imdb_max,
+        sort=sort,
     )
