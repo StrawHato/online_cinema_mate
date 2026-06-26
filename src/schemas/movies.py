@@ -12,17 +12,19 @@ class CDSGSchema(BaseModel):
     }
 
 
-class MovieCreateRequestSchema(BaseModel):
+class MovieBaseSchema(BaseModel):
     name: str
     year: int
     time: int
     imdb: Decimal
     votes: int = 0
-    meta_score: int | None
-    gross: Decimal | None
+    meta_score: int | None = None
+    gross: Decimal | None = None
     description: str
     price: Decimal
 
+
+class MovieCreateRequestSchema(MovieBaseSchema):
     certification: str
 
     genres: list[str]
@@ -31,6 +33,9 @@ class MovieCreateRequestSchema(BaseModel):
 
 
 class MovieResponseSchema(MovieCreateRequestSchema):
+    id: int
+    uuid: str
+
     certification: CDSGSchema
     genres: list[CDSGSchema]
     stars: list[CDSGSchema]
