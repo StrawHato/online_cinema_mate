@@ -342,13 +342,21 @@ class MovieService:
 
         movies = result.scalars().unique().all()
 
-        total_pages = ceil(total / page_size)
+        total_pages = max(1, ceil(total / page_size))
+
+        if page > total_pages:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Page not found.",
+            )
 
         return MovieListResponseSchema(
             items=[
                 MovieResponseSchema.model_validate(movie)
                 for movie in movies
             ],
+            page=page,
+            page_size=page_size,
             total=total or 0,
             total_pages=total_pages,
         )
