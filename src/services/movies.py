@@ -455,3 +455,29 @@ class MovieService:
         await db.refresh(movie)
 
         return MovieResponseSchema.model_validate(movie)
+
+    @staticmethod
+    async def delete_movie(
+            movie_id: int,
+            db: AsyncSession,
+    ) -> None:
+
+        stmt = select(MovieModel).where(
+            MovieModel.id == movie_id
+        )
+
+        result = await db.execute(stmt)
+
+        movie = result.scalar_one_or_none()
+
+        if movie is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie not found.",
+            )
+
+        # TODO:
+        # Prevent deleting movies that have been purchased.
+
+        await db.delete(movie)
+        await db.commit()
