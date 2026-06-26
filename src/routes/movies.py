@@ -3,7 +3,9 @@ from decimal import Decimal
 from fastapi import (
     APIRouter,
     Depends,
-    status, Query,
+    status,
+    Query,
+    Response
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -116,4 +118,24 @@ async def update_movie(
         movie_id=movie_id,
         movie_data=movie_data,
         db=db,
+    )
+
+
+@router.delete(
+    "/{movie_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_movie(
+    movie_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+) -> Response:
+
+    await MovieService.delete_movie(
+        movie_id=movie_id,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
     )
