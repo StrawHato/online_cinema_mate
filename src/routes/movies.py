@@ -43,3 +43,19 @@ async def create_movie(
         db=db,
         movie_data=movie_data,
     )
+
+
+@router.get(
+    "/{movie_uuid}/",
+    response_model=MovieResponseSchema,
+    summary="Get movie",
+)
+async def get_movie(
+    movie_uuid: str,
+    db: AsyncSession = Depends(get_db),
+) -> MovieResponseSchema:
+
+    return await MovieService.get_movie(
+        db=db,
+        movie_uuid=movie_uuid,
+    )
