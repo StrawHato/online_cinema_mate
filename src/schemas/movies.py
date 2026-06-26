@@ -7,6 +7,10 @@ class CDSGSchema(BaseModel):
     id: int
     name: str
 
+    model_config = {
+        "from_attributes": True
+    }
+
 
 class MovieCreateRequestSchema(BaseModel):
     name: str
@@ -24,3 +28,14 @@ class MovieCreateRequestSchema(BaseModel):
     genres: list[str]
     stars: list[str]
     directors: list[str]
+
+
+class MovieResponseSchema(MovieCreateRequestSchema):
+    certification: CDSGSchema
+    genres: list[CDSGSchema]
+    stars: list[CDSGSchema]
+    directors: list[CDSGSchema]
+
+    model_config = {
+        "from_attributes": True
+    }
