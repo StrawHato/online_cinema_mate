@@ -1,11 +1,42 @@
+from decimal import Decimal
+
 from fastapi import Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from schemas.movies import MovieResponseSchema, MovieCreateRequestSchema
-from src.database.models.movies import CertificationModel, GenreModel, StarModel, DirectorModel, MovieModel
+from schemas.movies import (
+    MovieResponseSchema,
+    MovieCreateRequestSchema,
+    MovieListResponseSchema
+)
+from src.database.models.movies import (
+    CertificationModel,
+    GenreModel,
+    StarModel,
+    DirectorModel,
+    MovieModel,
+    MovieSortEnum
+)
 from src.database.session import get_db
+
+
+SORT_MAPPING = {
+    MovieSortEnum.NAME_ASC: MovieModel.name.asc(),
+    MovieSortEnum.NAME_DESC: MovieModel.name.desc(),
+
+    MovieSortEnum.YEAR_ASC: MovieModel.year.asc(),
+    MovieSortEnum.YEAR_DESC: MovieModel.year.desc(),
+
+    MovieSortEnum.PRICE_ASC: MovieModel.price.asc(),
+    MovieSortEnum.PRICE_DESC: MovieModel.price.desc(),
+
+    MovieSortEnum.IMDB_ASC: MovieModel.imdb.asc(),
+    MovieSortEnum.IMDB_DESC: MovieModel.imdb.desc(),
+
+    MovieSortEnum.POPULARITY_ASC: MovieModel.votes.asc(),
+    MovieSortEnum.POPULARITY_DESC: MovieModel.votes.desc(),
+}
 
 
 class MovieService:
@@ -187,8 +218,8 @@ class MovieService:
 
     @staticmethod
     async def get_movie(
-            db: AsyncSession,
             movie_uuid: str,
+            db: AsyncSession = Depends(get_db),
     ) -> MovieResponseSchema:
 
         stmt = (
@@ -215,3 +246,105 @@ class MovieService:
             )
 
         return MovieResponseSchema.model_validate(movie)
+
+    @staticmethod
+    async def get_movies(
+            db: AsyncSession = Depends(get_db),
+            page: int = 1,
+            page_size: int = 20,
+            search: str | None = None,
+            genre: str | None = None,
+            director: str | None = None,
+            star: str | None = None,
+            year: int | None = None,
+            imdb_min: Decimal | None = None,
+            imdb_max: Decimal | None = None,
+            sort: MovieSortEnum = MovieSortEnum.NAME_ASC,
+    ) -> MovieListResponseSchema:
+
+        stmt = (
+            select(MovieModel)
+            .options(
+                selectinload(MovieModel.certification),
+                selectinload(MovieModel.genres),
+                selectinload(MovieModel.stars),
+                selectinload(MovieModel.directors),
+            )
+        )
+
+        if search:
+            stmt = (
+                stmt.outerjoin(MovieModel.directors)
+                .outerjoin(MovieModel.stars)
+                .where(
+                    or_(
+                        MovieModel.name.ilike(f"%{search}%"),
+                        MovieModel.description.ilike(f"%{search}%"),
+                        DirectorModel.name.ilike(f"%{search}%"),
+                        StarModel.name.ilike(f"%{search}%"),
+                    )
+                )
+            )
+
+        if genre:
+            stmt = (
+                stmt.join(MovieModel.genres)
+                .where(GenreModel.name == genre)
+            )
+
+        if director:
+            stmt = (
+                stmt.join(MovieModel.directors)
+                .where(DirectorModel.name == director)
+            )
+
+        if star:
+            stmt = (
+                stmt.join(MovieModel.stars)
+                .where(StarModel.name == star)
+            )
+
+        if year is not None:
+            stmt = stmt.where(
+                MovieModel.year == year
+            )
+
+        if imdb_min is not None:
+            stmt = stmt.where(
+                MovieModel.imdb >= imdb_min
+            )
+
+        if imdb_max is not None:
+            stmt = stmt.where(
+                MovieModel.imdb <= imdb_max
+            )
+
+        stmt = stmt.order_by(
+            SORT_MAPPING[sort]
+        )
+
+        total_stmt = (
+            select(func.count())
+            .select_from(stmt.subquery())
+        )
+
+        total = await db.scalar(total_stmt)
+
+        stmt = (
+            stmt.offset(
+                (page - 1) * page_size
+            )
+            .limit(page_size)
+        )
+
+        result = await db.execute(stmt)
+
+        movies = result.scalars().unique().all()
+
+        return MovieListResponseSchema(
+            items=[
+                MovieResponseSchema.model_validate(movie)
+                for movie in movies
+            ],
+            total=total or 0,
+        )
