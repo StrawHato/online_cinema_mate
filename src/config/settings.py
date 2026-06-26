@@ -32,11 +32,11 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
-    S3_HOST: str = os.getenv("S3_HOST")
-    S3_PORT: int = os.getenv("S3_PORT")
-    S3_ROOT_USER: str = os.getenv("S3_ROOT_USER")
-    S3_ROOT_PASSWORD: str = os.getenv("S3_ROOT_PASSWORD")
-    S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME")
+    S3_HOST: str
+    S3_PORT: int
+    S3_ACCESS_KEY: str
+    S3_SECRET_KEY: str
+    S3_BUCKET_NAME: str
 
     model_config = SettingsConfigDict(
         env_file=".env",
