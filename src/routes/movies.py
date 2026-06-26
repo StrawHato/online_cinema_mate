@@ -9,7 +9,7 @@ from fastapi import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.movies import MovieSortEnum
+from src.database.models.movies import MovieSortEnum
 from src.database.session import get_db
 from src.schemas.movies import (
     MovieCreateRequestSchema,
@@ -20,6 +20,7 @@ from src.schemas.movies import (
 from src.security.http import get_current_admin
 from src.database.models.accounts import UserModel
 from src.services.movies import MovieService
+
 
 router = APIRouter(
     prefix="/movies",
@@ -122,7 +123,7 @@ async def update_movie(
 
 
 @router.delete(
-    "/{movie_id}",
+    "/{movie_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_movie(
