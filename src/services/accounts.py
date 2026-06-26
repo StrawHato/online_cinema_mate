@@ -14,6 +14,7 @@ from src.database.models.accounts import (
     ActivationTokenModel,
     PasswordResetTokenModel,
     RefreshTokenModel,
+    UserProfileModel,
 )
 from src.config.settings import Settings
 from src.exceptions import BaseSecurityError
@@ -82,6 +83,11 @@ class AccountsService:
                 user_id=new_user.id
             )
             db.add(activation_token)
+
+            profile = UserProfileModel(
+                user=new_user,
+            )
+            db.add(profile)
 
             await db.commit()
             await db.refresh(new_user)
