@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, Column, ForeignKey, Table
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.models.base import Base
@@ -109,3 +109,27 @@ class CertificationModel(Base):
             f"<Certification(id={self.id}, "
             f"name='{self.name}')>"
         )
+
+
+MovieGenresTable = Table(
+    "movie_genres",
+    Base.metadata,
+    Column(
+        "movie_id",
+        ForeignKey(
+            "movies.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    ),
+    Column(
+        "genre_id",
+        ForeignKey(
+            "genres.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    ),
+)
