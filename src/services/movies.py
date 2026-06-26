@@ -1,4 +1,5 @@
 from decimal import Decimal
+from math import ceil
 
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select, func, or_
@@ -341,10 +342,13 @@ class MovieService:
 
         movies = result.scalars().unique().all()
 
+        total_pages = ceil(total / page_size)
+
         return MovieListResponseSchema(
             items=[
                 MovieResponseSchema.model_validate(movie)
                 for movie in movies
             ],
             total=total or 0,
+            total_pages=total_pages,
         )
