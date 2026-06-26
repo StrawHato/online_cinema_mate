@@ -133,3 +133,27 @@ MovieGenresTable = Table(
         nullable=False,
     ),
 )
+
+
+MovieStarsTable = Table(
+    "movie_stars",
+    Base.metadata,
+    Column(
+        "movie_id",
+        ForeignKey(
+            "movies.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    ),
+    Column(
+        "star_id",
+        ForeignKey(
+            "stars.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    ),
+)
