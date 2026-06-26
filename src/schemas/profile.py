@@ -85,3 +85,17 @@ class ProfileCreateRequestSchema(BaseProfileSchema):
 
 class ProfileUpdateRequestSchema(ProfileCreateRequestSchema):
     pass
+
+
+class ProfileResponseSchema(BaseModel):
+    id: int
+    user_id: int
+
+    first_name: str | None
+    last_name: str | None
+    gender: GenderEnum | None
+    date_of_birth: date | None
+    info: str | None
+    avatar: str | None
+
+    model_config = ConfigDict(from_attributes=True)
