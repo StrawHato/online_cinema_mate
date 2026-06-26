@@ -1,8 +1,9 @@
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.database.models.movies import CertificationModel, GenreModel, StarModel, DirectorModel
+from schemas.movies import MovieResponseSchema, MovieCreateRequestSchema
+from src.database.models.movies import CertificationModel, GenreModel, StarModel, DirectorModel, MovieModel
 from src.database.session import get_db
 
 
@@ -119,3 +120,66 @@ class MovieService:
             movie_directors.append(director)
 
         return movie_directors
+
+    @staticmethod
+    async def create(
+            movie_data: MovieCreateRequestSchema,
+            db: AsyncSession = Depends(get_db),
+    ) -> MovieResponseSchema:
+
+        stmt = select(MovieModel).where(
+            MovieModel.name == movie_data.name,
+            MovieModel.year == movie_data.year,
+        )
+
+        result = await db.execute(stmt)
+
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Movie already exists.",
+            )
+
+        certification = await MovieService._get_or_create_certification(
+            db=db,
+            certification_name=movie_data.certification,
+        )
+
+        genres = await MovieService._get_or_create_genres(
+            db=db,
+            genres=movie_data.genres,
+        )
+
+        stars = await MovieService._get_or_create_stars(
+            db=db,
+            stars=movie_data.stars,
+        )
+
+        directors = await MovieService._get_or_create_directors(
+            db=db,
+            directors=movie_data.directors,
+        )
+
+        movie = MovieModel(
+            name=movie_data.name,
+            year=movie_data.year,
+            time=movie_data.time,
+            imdb=movie_data.imdb,
+            votes=movie_data.votes,
+            meta_score=movie_data.meta_score,
+            gross=movie_data.gross,
+            description=movie_data.description,
+            price=movie_data.price,
+            certification=certification,
+            genres=genres,
+            stars=stars,
+            directors=directors,
+        )
+
+        db.add(movie)
+
+        await db.commit()
+
+        await db.refresh(movie)
+
+        return MovieResponseSchema.model_validate(movie)
