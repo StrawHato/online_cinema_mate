@@ -16,11 +16,11 @@ from src.schemas.movies import (
     MovieResponseSchema,
     MovieListResponseSchema,
     MovieUpdateRequestSchema,
+    GenreResponseSchema,
 )
 from src.security.http import get_current_admin
 from src.database.models.accounts import UserModel
-from src.services.movies import MovieService
-
+from src.services.movies import MovieService, GenreService
 
 router = APIRouter(
     prefix="/movies",
@@ -50,22 +50,6 @@ async def create_movie(
     return await MovieService.create_movie(
         db=db,
         movie_data=movie_data,
-    )
-
-
-@router.get(
-    "/{movie_uuid}/",
-    response_model=MovieResponseSchema,
-    summary="Get movie",
-)
-async def get_movie(
-    movie_uuid: str,
-    db: AsyncSession = Depends(get_db),
-) -> MovieResponseSchema:
-
-    return await MovieService.get_movie(
-        db=db,
-        movie_uuid=movie_uuid,
     )
 
 
@@ -100,6 +84,34 @@ async def get_movies(
         imdb_min=imdb_min,
         imdb_max=imdb_max,
         sort=sort,
+    )
+
+
+@router.get(
+    "/genres/",
+    response_model=list[GenreResponseSchema],
+    summary="Get genres list",
+)
+async def get_genres(
+    db: AsyncSession = Depends(get_db),
+) -> list[GenreResponseSchema]:
+
+    return await GenreService.get_genres(db)
+
+
+@router.get(
+    "/{movie_uuid}/",
+    response_model=MovieResponseSchema,
+    summary="Get movie",
+)
+async def get_movie(
+    movie_uuid: str,
+    db: AsyncSession = Depends(get_db),
+) -> MovieResponseSchema:
+
+    return await MovieService.get_movie(
+        db=db,
+        movie_uuid=movie_uuid,
     )
 
 
