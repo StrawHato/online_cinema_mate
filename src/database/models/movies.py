@@ -1,4 +1,5 @@
 from decimal import Decimal
+from enum import Enum
 from typing import Optional
 from uuid import uuid4
 
@@ -15,6 +16,23 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.models.base import Base
+
+
+class MovieSortEnum(str, Enum):
+    NAME_ASC = "name"
+    NAME_DESC = "-name"
+
+    YEAR_ASC = "year"
+    YEAR_DESC = "-year"
+
+    PRICE_ASC = "price"
+    PRICE_DESC = "-price"
+
+    IMDB_ASC = "imdb"
+    IMDB_DESC = "-imdb"
+
+    POPULARITY_ASC = "votes"
+    POPULARITY_DESC = "-votes"
 
 
 class GenreModel(Base):
