@@ -1,4 +1,17 @@
-from sqlalchemy import String, Column, ForeignKey, Table
+from decimal import Decimal
+from typing import Optional
+from uuid import uuid4
+
+from sqlalchemy import (
+    String,
+    Column,
+    ForeignKey,
+    Table,
+    Numeric,
+    Text,
+    Integer,
+    CheckConstraint
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.models.base import Base
@@ -181,3 +194,114 @@ MovieDirectorsTable = Table(
         nullable=False,
     ),
 )
+
+
+class MovieModel(Base):
+    __tablename__ = "movies"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+    )
+
+    uuid: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        nullable=False,
+        default=lambda: str(uuid4()),
+        index=True,
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        index=True,
+    )
+
+    year: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        index=True,
+    )
+
+    time: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+
+    imdb: Mapped[Decimal] = mapped_column(
+        Numeric(3,1),
+        nullable=False,
+        index=True,
+    )
+
+    votes: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    meta_score: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    gross: Mapped[Optional[Decimal]] = mapped_column(
+        Numeric(12, 2),
+        nullable=True,
+    )
+
+    description: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    price: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+    )
+
+    certification_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey(
+            "certifications.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+    )
+
+    certification: Mapped[Optional["CertificationModel"]] = relationship(
+        back_populates="movies",
+        lazy="selectin",
+    )
+
+    genres: Mapped[list["GenreModel"]] = relationship(
+        secondary=MovieGenresTable,
+        back_populates="movies",
+        lazy="selectin",
+    )
+
+    directors: Mapped[list["DirectorModel"]] = relationship(
+        secondary=MovieDirectorsTable,
+        back_populates="movies",
+        lazy="selectin",
+    )
+
+    stars: Mapped[list["StarModel"]] = relationship(
+        secondary=MovieStarsTable,
+        back_populates="movies",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        CheckConstraint("imdb >= 0 AND imdb <= 10"),
+        CheckConstraint("price >= 0"),
+        CheckConstraint("votes >= 0"),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Movie("
+            f"id={self.id}, "
+            f"name='{self.name}', "
+            f"year={self.year}"
+            f")>"
+        )
