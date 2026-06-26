@@ -1,6 +1,7 @@
 from fastapi import Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from schemas.movies import MovieResponseSchema, MovieCreateRequestSchema
 from src.database.models.movies import CertificationModel, GenreModel, StarModel, DirectorModel, MovieModel
@@ -181,5 +182,36 @@ class MovieService:
         await db.commit()
 
         await db.refresh(movie)
+
+        return MovieResponseSchema.model_validate(movie)
+
+    @staticmethod
+    async def get_movie(
+            db: AsyncSession,
+            movie_uuid: str,
+    ) -> MovieResponseSchema:
+
+        stmt = (
+            select(MovieModel)
+            .options(
+                selectinload(MovieModel.certification),
+                selectinload(MovieModel.genres),
+                selectinload(MovieModel.stars),
+                selectinload(MovieModel.directors),
+            )
+            .where(
+                MovieModel.uuid == movie_uuid
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        movie = result.scalar_one_or_none()
+
+        if movie is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie not found.",
+            )
 
         return MovieResponseSchema.model_validate(movie)
