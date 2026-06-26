@@ -13,6 +13,7 @@ from src.schemas.movies import (
     MovieCreateRequestSchema,
     MovieResponseSchema,
     MovieListResponseSchema,
+    MovieUpdateRequestSchema,
 )
 from src.security.http import get_current_admin
 from src.database.models.accounts import UserModel
@@ -96,4 +97,23 @@ async def get_movies(
         imdb_min=imdb_min,
         imdb_max=imdb_max,
         sort=sort,
+    )
+
+
+@router.patch(
+    "/{movie_id}/",
+    response_model=MovieResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+async def update_movie(
+    movie_id: int,
+    movie_data: MovieUpdateRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+) -> MovieResponseSchema:
+
+    return await MovieService.update_movie(
+        movie_id=movie_id,
+        movie_data=movie_data,
+        db=db,
     )
