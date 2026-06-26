@@ -56,3 +56,30 @@ class StarModel(Base):
             f"<Star(id={self.id}, "
             f"name='{self.name}')>"
         )
+
+
+class DirectorModel(Base):
+    __tablename__ = "directors"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    movies: Mapped[list["MovieModel"]] = relationship(
+        secondary="movie_directors",
+        back_populates="directors",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Director(id={self.id}, "
+            f"name='{self.name}')>"
+        )
