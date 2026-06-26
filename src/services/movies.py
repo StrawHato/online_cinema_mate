@@ -1,7 +1,7 @@
 from decimal import Decimal
 from math import ceil
 
-from fastapi import Depends, HTTPException, status
+from fastapi import HTTPException, status
 from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -19,7 +19,6 @@ from src.database.models.movies import (
     MovieModel,
     MovieSortEnum
 )
-from src.database.session import get_db
 
 
 SORT_MAPPING = {
@@ -43,9 +42,9 @@ SORT_MAPPING = {
 class MovieService:
 
     @staticmethod
-    async def _get_or_create_certification(
+    async def get_or_create_certification(
             certification_name: str,
-            db: AsyncSession = Depends(get_db),
+            db: AsyncSession,
     ) -> CertificationModel:
         stmt = select(CertificationModel).where(
             CertificationModel.name == certification_name
@@ -67,9 +66,9 @@ class MovieService:
         return certification
 
     @staticmethod
-    async def _get_or_create_genres(
+    async def get_or_create_genres(
             genres: list[str],
-            db: AsyncSession = Depends(get_db),
+            db: AsyncSession,
     ) -> list[GenreModel]:
 
         movie_genres = []
@@ -98,9 +97,9 @@ class MovieService:
         return movie_genres
 
     @staticmethod
-    async def _get_or_create_stars(
+    async def get_or_create_stars(
             stars: list[str],
-            db: AsyncSession = Depends(get_db),
+            db: AsyncSession,
     ) -> list[StarModel]:
 
         movie_stars = []
@@ -129,9 +128,9 @@ class MovieService:
         return movie_stars
 
     @staticmethod
-    async def _get_or_create_directors(
+    async def get_or_create_directors(
             directors: list[str],
-            db: AsyncSession = Depends(get_db),
+            db: AsyncSession,
     ):
         movie_directors = []
 
@@ -157,7 +156,7 @@ class MovieService:
     @staticmethod
     async def create_movie(
             movie_data: MovieCreateRequestSchema,
-            db: AsyncSession = Depends(get_db),
+            db: AsyncSession,
     ) -> MovieResponseSchema:
 
         stmt = select(MovieModel).where(
@@ -220,7 +219,7 @@ class MovieService:
     @staticmethod
     async def get_movie(
             movie_uuid: str,
-            db: AsyncSession = Depends(get_db),
+            db: AsyncSession,
     ) -> MovieResponseSchema:
 
         stmt = (
@@ -250,7 +249,7 @@ class MovieService:
 
     @staticmethod
     async def get_movies(
-            db: AsyncSession = Depends(get_db),
+            db: AsyncSession,
             page: int = 1,
             page_size: int = 20,
             search: str | None = None,
