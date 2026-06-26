@@ -360,3 +360,19 @@ class MovieService:
             total=total or 0,
             total_pages=total_pages,
         )
+
+    @staticmethod
+    async def get_movie_by_name_and_year(
+            db: AsyncSession,
+            name: str,
+            year: int,
+    ) -> MovieModel | None:
+
+        stmt = select(MovieModel).where(
+            MovieModel.name == name,
+            MovieModel.year == year,
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
