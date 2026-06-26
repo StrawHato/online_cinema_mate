@@ -49,3 +49,39 @@ class BaseProfileSchema(BaseModel):
             raise ValueError("Info cannot be empty.")
 
         return value
+
+
+class ProfileCreateRequestSchema(BaseProfileSchema):
+    avatar: UploadFile | None = None
+
+    @classmethod
+    def from_form(
+        cls,
+        first_name: str | None = Form(None),
+        last_name: str | None = Form(None),
+        gender: GenderEnum | None = Form(None),
+        date_of_birth: date | None = Form(None),
+        info: str | None = Form(None),
+        avatar: UploadFile | None = File(None),
+    ) -> "ProfileCreateRequestSchema":
+        return cls(
+            first_name=first_name,
+            last_name=last_name,
+            gender=gender,
+            date_of_birth=date_of_birth,
+            info=info,
+            avatar=avatar,
+        )
+
+    @field_validator("avatar")
+    @classmethod
+    def validate_avatar(cls, value: UploadFile | None) -> UploadFile | None:
+        if value is None:
+            return value
+
+        validate_image(value)
+        return value
+
+
+class ProfileUpdateRequestSchema(ProfileCreateRequestSchema):
+    pass
