@@ -83,3 +83,29 @@ class DirectorModel(Base):
             f"<Director(id={self.id}, "
             f"name='{self.name}')>"
         )
+
+
+class CertificationModel(Base):
+    __tablename__ = "certifications"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(20),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    movies: Mapped[list["MovieModel"]] = relationship(
+        back_populates="certification",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Certification(id={self.id}, "
+            f"name='{self.name}')>"
+        )
