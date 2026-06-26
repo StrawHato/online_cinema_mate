@@ -53,3 +53,7 @@ class MovieListResponseSchema(BaseModel):
     total_pages: int
 
     items: list[MovieResponseSchema]
+
+
+class MovieUpdateRequestSchema(MovieCreateRequestSchema):
+    pass
