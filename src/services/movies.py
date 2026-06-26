@@ -6,10 +6,11 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from schemas.movies import (
+from src.schemas.movies import (
     MovieResponseSchema,
     MovieCreateRequestSchema,
-    MovieListResponseSchema
+    MovieListResponseSchema,
+    MovieUpdateRequestSchema
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -172,22 +173,22 @@ class MovieService:
                 detail="Movie already exists.",
             )
 
-        certification = await MovieService._get_or_create_certification(
+        certification = await MovieService.get_or_create_certification(
             db=db,
             certification_name=movie_data.certification,
         )
 
-        genres = await MovieService._get_or_create_genres(
+        genres = await MovieService.get_or_create_genres(
             db=db,
             genres=movie_data.genres,
         )
 
-        stars = await MovieService._get_or_create_stars(
+        stars = await MovieService.get_or_create_stars(
             db=db,
             stars=movie_data.stars,
         )
 
-        directors = await MovieService._get_or_create_directors(
+        directors = await MovieService.get_or_create_directors(
             db=db,
             directors=movie_data.directors,
         )
@@ -375,3 +376,82 @@ class MovieService:
         result = await db.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def update_movie(
+            movie_id: int,
+            movie_data: MovieUpdateRequestSchema,
+            db: AsyncSession,
+    ) -> MovieResponseSchema:
+
+        stmt = (
+            select(MovieModel)
+            .options(
+                selectinload(MovieModel.certification),
+                selectinload(MovieModel.genres),
+                selectinload(MovieModel.stars),
+                selectinload(MovieModel.directors),
+            )
+            .where(MovieModel.id == movie_id)
+        )
+
+        result = await db.execute(stmt)
+
+        movie = result.scalar_one_or_none()
+
+        if movie is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie not found.",
+            )
+
+        data = movie_data.model_dump(
+            exclude_unset=True,
+            exclude={
+                "certification",
+                "genres",
+                "stars",
+                "directors",
+            },
+        )
+
+        for field, value in data.items():
+            setattr(movie, field, value)
+
+        if movie_data.certification is not None:
+            movie.certification = (
+                await MovieService.get_or_create_certification(
+                    movie_data.certification,
+                    db,
+                )
+            )
+
+        if movie_data.genres is not None:
+            movie.genres = (
+                await MovieService.get_or_create_genres(
+                    movie_data.genres,
+                    db,
+                )
+            )
+
+        if movie_data.stars is not None:
+            movie.stars = (
+                await MovieService.get_or_create_stars(
+                    movie_data.stars,
+                    db,
+                )
+            )
+
+        if movie_data.directors is not None:
+            movie.directors = (
+                await MovieService.get_or_create_directors(
+                    movie_data.directors,
+                    db,
+                )
+            )
+
+        await db.commit()
+
+        await db.refresh(movie)
+
+        return MovieResponseSchema.model_validate(movie)
