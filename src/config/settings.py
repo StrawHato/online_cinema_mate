@@ -32,6 +32,12 @@ class Settings(BaseSettings):
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
 
+    S3_HOST: str = os.getenv("S3_HOST")
+    S3_PORT: int = os.getenv("S3_PORT")
+    S3_ROOT_USER: str = os.getenv("S3_ROOT_USER")
+    S3_ROOT_PASSWORD: str = os.getenv("S3_ROOT_PASSWORD")
+    S3_BUCKET_NAME: str = os.getenv("S3_BUCKET_NAME")
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
@@ -40,6 +46,10 @@ class Settings(BaseSettings):
     @property
     def REDIS_URL(self) -> str:
         return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/0"
+
+    @property
+    def S3_ENDPOINT(self) -> str:
+        return f"{self.S3_HOST}:{self.S3_PORT}"
 
 
 @lru_cache
