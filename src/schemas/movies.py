@@ -3,6 +3,11 @@ from decimal import Decimal
 from pydantic import BaseModel
 
 
+class CDSGSchema(BaseModel):
+    id: int
+    name: str
+
+
 class MovieCreateRequestSchema(BaseModel):
     name: str
     year: int
