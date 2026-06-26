@@ -32,7 +32,7 @@ class MovieCreateRequestSchema(MovieBaseSchema):
     directors: list[str]
 
 
-class MovieResponseSchema(MovieCreateRequestSchema):
+class MovieResponseSchema(MovieBaseSchema):
     id: int
     uuid: str
 
@@ -44,3 +44,10 @@ class MovieResponseSchema(MovieCreateRequestSchema):
     model_config = {
         "from_attributes": True
     }
+
+
+class MovieListResponseSchema(BaseModel):
+    total: int
+    page: int = 1
+    page_size: int = 10
+    items: list[MovieResponseSchema]
