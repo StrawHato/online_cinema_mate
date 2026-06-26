@@ -29,3 +29,30 @@ class GenreModel(Base):
             f"<Genre(id={self.id}, "
             f"name='{self.name}')>"
         )
+
+
+class StarModel(Base):
+    __tablename__ = "stars"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    movies: Mapped[list["MovieModel"]] = relationship(
+        secondary="movie_stars",
+        back_populates="stars",
+        lazy="selectin",
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<Star(id={self.id}, "
+            f"name='{self.name}')>"
+        )
