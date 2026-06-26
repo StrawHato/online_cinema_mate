@@ -157,3 +157,27 @@ MovieStarsTable = Table(
         nullable=False,
     ),
 )
+
+
+MovieDirectorsTable = Table(
+    "movie_directors",
+    Base.metadata,
+    Column(
+        "movie_id",
+        ForeignKey(
+            "movies.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    ),
+    Column(
+        "director_id",
+        ForeignKey(
+            "directors.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+        nullable=False,
+    ),
+)
