@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.schemas.movies import CDSGSchema
 from src.database.models.accounts import UserModel
 from src.database.models.movies import MovieModel
 from src.database.models.shopping_cart import (
@@ -101,7 +102,10 @@ class ShoppingCartService:
                         name=item.movie.name,
                         year=item.movie.year,
                         price=item.movie.price,
-                        genres=item.movie.genres,
+                        genres=[
+                            CDSGSchema.model_validate(genre)
+                            for genre in item.movie.genres
+                        ],
                     ),
                 )
             )
