@@ -58,3 +58,21 @@ async def get_orders(
         page=page,
         page_size=page_size,
     )
+
+
+@router.get(
+    "/{order_uuid}/",
+    response_model=OrderResponseSchema,
+    summary="Get order",
+)
+async def get_order(
+    order_uuid: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+) -> OrderResponseSchema:
+
+    return await OrderService.get_order(
+        order_uuid=order_uuid,
+        current_user=current_user,
+        db=db,
+    )
