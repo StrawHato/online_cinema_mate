@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Optional
@@ -11,11 +12,14 @@ from sqlalchemy import (
     Numeric,
     Text,
     Integer,
-    CheckConstraint
+    CheckConstraint,
+    DateTime,
+    func
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.models.base import Base
+from src.database.models.accounts import UserModel
 
 
 class MovieSortEnum(str, Enum):
@@ -309,6 +313,11 @@ class MovieModel(Base):
         lazy="selectin",
     )
 
+    favorite_users: Mapped[list["UserFavoriteMovieModel"]] = relationship(
+        back_populates="movie",
+        cascade="all, delete-orphan",
+    )
+
     __table_args__ = (
         CheckConstraint("imdb >= 0 AND imdb <= 10"),
         CheckConstraint("price >= 0"),
@@ -321,5 +330,51 @@ class MovieModel(Base):
             f"id={self.id}, "
             f"name='{self.name}', "
             f"year={self.year}"
+            f")>"
+        )
+
+
+class UserFavoriteMovieModel(Base):
+    __tablename__ = "user_favorite_movies"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+    )
+
+    movie_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "movies.id",
+            ondelete="CASCADE",
+        ),
+        primary_key=True,
+    )
+
+    user: Mapped["UserModel"] = relationship(
+        "UserModel",
+        back_populates="favorite_movies",
+        lazy="selectin",
+    )
+
+    movie: Mapped["MovieModel"] = relationship(
+        "MovieModel",
+        back_populates="favorite_users",
+        lazy="selectin",
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<UserFavoriteMovie("
+            f"user_id={self.user_id}, "
+            f"movie_id={self.movie_id}"
             f")>"
         )
