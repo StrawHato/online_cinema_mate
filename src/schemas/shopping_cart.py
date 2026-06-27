@@ -3,13 +3,15 @@ from decimal import Decimal
 
 from pydantic import BaseModel
 
+from src.schemas.movies import CDSGSchema
+
 
 class CartMovieResponseSchema(BaseModel):
     uuid: str
     name: str
     year: int
     price: Decimal
-    genres: list[str]
+    genres: list[CDSGSchema]
 
     model_config = {
         "from_attributes": True,
