@@ -19,6 +19,7 @@ from sqlalchemy.orm import (
 )
 
 from src.database.models.base import Base
+from src.database.models.payments import PaymentModel
 
 
 class OrderStatusEnum(str, Enum):
@@ -82,6 +83,12 @@ class OrderModel(Base):
         "OrderItemModel",
         back_populates="order",
         cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    payments: Mapped[list["PaymentModel"]] = relationship(
+        "PaymentModel",
+        back_populates="order",
         lazy="selectin",
     )
 

@@ -22,6 +22,7 @@ from sqlalchemy.orm import (
 )
 
 from src.database.models.base import Base
+from src.database.models.payments import PaymentModel
 from src.database.validators import accounts as validators
 from src.security.passwords import hash_password, verify_password
 from src.security.utils import generate_secure_token
@@ -107,6 +108,12 @@ class UserModel(Base):
         "OrderModel",
         back_populates="user",
         cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    payments: Mapped[list["PaymentModel"]] = relationship(
+        "PaymentModel",
+        back_populates="user",
         lazy="selectin",
     )
 
