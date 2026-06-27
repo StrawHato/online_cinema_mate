@@ -541,3 +541,37 @@ class MovieService:
         db.add(favorite)
 
         await db.commit()
+
+    @staticmethod
+    async def remove_from_favorites(
+            movie_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid,
+            db,
+        )
+
+        stmt = (
+            select(UserFavoriteMovieModel)
+            .where(
+                UserFavoriteMovieModel.user_id == current_user.id,
+                UserFavoriteMovieModel.movie_id == movie.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        favorite = result.scalar_one_or_none()
+
+        if favorite is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie is not in favorites.",
+            )
+
+        await db.delete(favorite)
+
+        await db.commit()
