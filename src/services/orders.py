@@ -154,7 +154,7 @@ class OrderService:
             await db.delete(cart_item)
 
         await db.commit()
-        await db.refresh(order)
+        await db.refresh(order, attribute_names=["items"])
 
         return OrderService._to_order_response(order)
 
@@ -224,3 +224,32 @@ class OrderService:
         )
 
         return OrderService._to_order_response(order)
+
+    @staticmethod
+    async def cancel_order(
+        order_uuid: str,
+        current_user: UserModel,
+        db: AsyncSession,
+    ) -> None:
+
+        order = await OrderService._get_order_or_404(
+            order_uuid=order_uuid,
+            current_user=current_user,
+            db=db,
+        )
+
+        if order.status == OrderStatusEnum.PAID:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Paid orders cannot be canceled.",
+            )
+
+        if order.status == OrderStatusEnum.CANCELED:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Order is already canceled.",
+            )
+
+        order.status = OrderStatusEnum.CANCELED
+
+        await db.commit()
