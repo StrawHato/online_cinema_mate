@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from uuid import uuid4
@@ -8,6 +9,8 @@ from sqlalchemy import (
     Numeric,
     String,
     CheckConstraint,
+    DateTime,
+    func,
 )
 from sqlalchemy.orm import (
     Mapped,
@@ -46,6 +49,12 @@ class OrderModel(Base):
         ),
         nullable=False,
         index=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False,
     )
 
     status: Mapped[OrderStatusEnum] = mapped_column(
