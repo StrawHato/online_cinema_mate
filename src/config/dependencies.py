@@ -1,10 +1,14 @@
 from functools import lru_cache
 
+from fastapi import Depends
+
 from src.notifications import EmailSenderInterface
 from src.notifications.emails import EmailSender
-from src.config.settings import get_settings
+from src.config.settings import get_settings, Settings
 from src.security.interfaces import JWTAuthManagerInterface
 from src.security.token_manager import JWTAuthManager
+from src.storages.interfaces import StorageInterface
+from src.storages.s3 import S3Storage
 
 
 @lru_cache
@@ -33,4 +37,15 @@ def get_accounts_email_notificator() -> EmailSenderInterface:
         activation_complete_email_template_name=settings.ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME,
         password_email_template_name=settings.PASSWORD_RESET_TEMPLATE_NAME,
         password_complete_email_template_name=settings.PASSWORD_RESET_COMPLETE_TEMPLATE_NAME,
+    )
+
+
+def get_storage(
+    settings: Settings = Depends(get_settings),
+) -> StorageInterface:
+    return S3Storage(
+        endpoint_url=settings.S3_ENDPOINT,
+        access_key=settings.S3_ACCESS_KEY,
+        secret_key=settings.S3_SECRET_KEY,
+        bucket_name=settings.S3_BUCKET_NAME,
     )
