@@ -76,3 +76,25 @@ async def get_order(
         current_user=current_user,
         db=db,
     )
+
+
+@router.post(
+    "/{order_uuid}/cancel/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Cancel order",
+)
+async def cancel_order(
+    order_uuid: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+) -> Response:
+
+    await OrderService.cancel_order(
+        order_uuid=order_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
