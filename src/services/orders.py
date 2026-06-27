@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -35,8 +36,6 @@ class OrderService:
             .options(
                 selectinload(OrderModel.items)
                 .selectinload(OrderItemModel.movie)
-                .selectinload(OrderItemModel.movie)
-                .selectinload(MovieModel.genres)
             )
             .where(
                 OrderModel.uuid == order_uuid,
@@ -253,3 +252,90 @@ class OrderService:
         order.status = OrderStatusEnum.CANCELED
 
         await db.commit()
+
+    @staticmethod
+    async def get_all_orders(
+            db: AsyncSession,
+            page: int,
+            page_size: int,
+            user_id: int | None = None,
+            status: OrderStatusEnum | None = None,
+            created_from: datetime | None = None,
+            created_to: datetime | None = None,
+    ) -> OrderListResponseSchema:
+
+        count_stmt = select(func.count(OrderModel.id))
+
+        stmt = (
+            select(OrderModel)
+            .options(
+                selectinload(OrderModel.items)
+                .selectinload(OrderItemModel.movie)
+            )
+        )
+
+        if user_id is not None:
+            count_stmt = count_stmt.where(
+                OrderModel.user_id == user_id,
+            )
+
+            stmt = stmt.where(
+                OrderModel.user_id == user_id,
+            )
+
+        if status is not None:
+            count_stmt = count_stmt.where(
+                OrderModel.status == status,
+            )
+
+            stmt = stmt.where(
+                OrderModel.status == status,
+            )
+
+        if created_from is not None:
+            count_stmt = count_stmt.where(
+                OrderModel.created_at >= created_from,
+            )
+
+            stmt = stmt.where(
+                OrderModel.created_at >= created_from,
+            )
+
+        if created_to is not None:
+            count_stmt = count_stmt.where(
+                OrderModel.created_at <= created_to,
+            )
+
+            stmt = stmt.where(
+                OrderModel.created_at <= created_to,
+            )
+
+        total = await db.scalar(count_stmt) or 0
+
+        stmt = (
+            stmt
+            .order_by(OrderModel.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        result = await db.execute(stmt)
+
+        orders = result.scalars().all()
+
+        total_pages = (
+            (total + page_size - 1) // page_size
+            if total
+            else 1
+        )
+
+        return OrderListResponseSchema(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            items=[
+                OrderService._to_order_response(order)
+                for order in orders
+            ],
+        )
