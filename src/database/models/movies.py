@@ -317,6 +317,11 @@ class MovieModel(Base):
         cascade="all, delete-orphan",
     )
 
+    cart_items: Mapped[list["CartItemModel"]] = relationship(
+        "CartItemModel",
+        back_populates="movie",
+    )
+
     __table_args__ = (
         CheckConstraint("imdb >= 0 AND imdb <= 10"),
         CheckConstraint("price >= 0"),
