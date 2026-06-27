@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.database.models.accounts import UserModel
-from src.database.models.movies import MovieModel
+from src.database.models.movies import MovieModel, UserFavoriteMovieModel
 from src.database.models.shopping_cart import (
     CartItemModel,
     CartModel,
@@ -147,5 +147,38 @@ class ShoppingCartService:
         )
 
         db.add(cart_item)
+
+        await db.commit()
+
+    @staticmethod
+    async def remove_movie_from_cart(
+        movie_uuid: str,
+        current_user: UserModel,
+        db: AsyncSession,
+    ) -> None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid,
+            db,
+        )
+
+        cart = await ShoppingCartService._get_or_create_cart(
+            current_user=current_user,
+            db=db,
+        )
+
+        cart_item = await ShoppingCartService._get_cart_item_or_404(
+            cart.id,
+            movie.id,
+            db,
+        )
+
+        if cart_item is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie is not in cart.",
+            )
+
+        await db.delete(cart_item)
 
         await db.commit()
