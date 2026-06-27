@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from src.database.models.accounts import UserModel
-from src.database.models.movies import MovieModel, UserFavoriteMovieModel
+from src.database.models.movies import MovieModel
 from src.database.models.shopping_cart import (
     CartItemModel,
     CartModel,
@@ -49,13 +49,13 @@ class ShoppingCartService:
 
             db.add(cart)
 
-            await db.commit()
+            await db.flush()
             await db.refresh(cart)
 
         return cart
 
     @staticmethod
-    async def _get_cart_item_or_404(
+    async def _get_cart_item(
         cart_id: int,
         movie_id: int,
         db: AsyncSession,
@@ -129,7 +129,7 @@ class ShoppingCartService:
             db=db,
         )
 
-        existing = await ShoppingCartService._get_cart_item_or_404(
+        existing = await ShoppingCartService._get_cart_item(
             cart.id,
             movie.id,
             db,
@@ -167,7 +167,7 @@ class ShoppingCartService:
             db=db,
         )
 
-        cart_item = await ShoppingCartService._get_cart_item_or_404(
+        cart_item = await ShoppingCartService._get_cart_item(
             cart.id,
             movie.id,
             db,
@@ -180,5 +180,21 @@ class ShoppingCartService:
             )
 
         await db.delete(cart_item)
+
+        await db.commit()
+
+    @staticmethod
+    async def clear_cart(
+        current_user: UserModel,
+        db: AsyncSession,
+    ) -> None:
+
+        cart = await ShoppingCartService._get_or_create_cart(
+            current_user=current_user,
+            db=db,
+        )
+
+        for item in cart.items:
+            await db.delete(item)
 
         await db.commit()
