@@ -1,6 +1,11 @@
-from fastapi import APIRouter, Depends, status
+from decimal import Decimal
+
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.database.models.movies import MovieSortEnum
+from src.schemas.movies import MovieListResponseSchema
+from src.services.movies import MovieService
 from src.database.models.accounts import UserModel
 from src.database.session import get_db
 from src.config.dependencies import get_storage
@@ -52,4 +57,39 @@ async def update_profile(
         storage=storage,
         current_user=current_user,
         profile_data=profile_data,
+    )
+
+
+@router.get(
+    "/favorites/",
+    response_model=MovieListResponseSchema,
+)
+async def get_favorite_movies(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=20),
+    search: str | None = None,
+    genre: str | None = None,
+    director: str | None = None,
+    star: str | None = None,
+    year: int | None = None,
+    imdb_min: Decimal | None = None,
+    imdb_max: Decimal | None = None,
+    sort: MovieSortEnum = MovieSortEnum.NAME_ASC,
+):
+
+    return await MovieService.get_movies(
+        db=db,
+        page=page,
+        page_size=page_size,
+        search=search,
+        genre=genre,
+        director=director,
+        star=star,
+        year=year,
+        imdb_min=imdb_min,
+        imdb_max=imdb_max,
+        sort=sort,
+        favorite_user_id=current_user.id,
     )
