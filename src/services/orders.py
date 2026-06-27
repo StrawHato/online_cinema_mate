@@ -1,5 +1,7 @@
+from decimal import Decimal
+
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -8,12 +10,15 @@ from src.database.models.accounts import UserModel
 from src.database.models.orders import (
     OrderItemModel,
     OrderModel,
+    OrderStatusEnum,
 )
 from src.schemas.orders import (
     OrderItemResponseSchema,
+    OrderListResponseSchema,
     OrderMovieResponseSchema,
     OrderResponseSchema,
 )
+from src.services.shopping_cart import ShoppingCartService
 
 
 class OrderService:
@@ -74,3 +79,81 @@ class OrderService:
                 for item in order.items
             ],
         )
+
+    @staticmethod
+    async def create_order(
+        current_user: UserModel,
+        db: AsyncSession,
+    ) -> OrderResponseSchema:
+
+        cart = await ShoppingCartService._get_or_create_cart(
+            current_user=current_user,
+            db=db,
+        )
+
+        if not cart.items:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Shopping cart is empty.",
+            )
+
+        movie_ids = [
+            item.movie_id
+            for item in cart.items
+        ]
+
+        stmt = (
+            select(OrderItemModel.movie_id)
+            .join(OrderModel)
+            .where(
+                OrderModel.user_id == current_user.id,
+                OrderModel.status == OrderStatusEnum.PENDING,
+                OrderItemModel.movie_id.in_(movie_ids),
+            )
+        )
+
+        result = await db.execute(stmt.limit(1))
+
+        if result.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Some movies are already included "
+                    "in another pending order."
+                ),
+            )
+
+        # TODO:
+        # Check already purchased movies.
+
+        order = OrderModel(
+            user_id=current_user.id,
+        )
+
+        db.add(order)
+
+        await db.flush()
+
+        total_amount = Decimal("0")
+
+        for cart_item in cart.items:
+
+            order_item = OrderItemModel(
+                order_id=order.id,
+                movie_id=cart_item.movie.id,
+                price_at_order=cart_item.movie.price,
+            )
+
+            db.add(order_item)
+
+            total_amount += cart_item.movie.price
+
+        order.total_amount = total_amount
+
+        for cart_item in cart.items:
+            await db.delete(cart_item)
+
+        await db.commit()
+        await db.refresh(order)
+
+        return OrderService._to_order_response(order)
