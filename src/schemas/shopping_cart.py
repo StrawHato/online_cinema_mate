@@ -14,3 +14,14 @@ class CartMovieResponseSchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class CartItemResponseSchema(BaseModel):
+    id: int
+    added_at: datetime
+
+    movie: CartMovieResponseSchema
+
+    model_config = {
+        "from_attributes": True,
+    }
