@@ -41,6 +41,32 @@ from src.security.interfaces import JWTAuthManagerInterface
 
 
 class AccountsService:
+
+    @staticmethod
+    async def _get_user_or_404(
+            user_id: int,
+            db: AsyncSession,
+    ) -> UserModel:
+
+        stmt = (
+            select(UserModel)
+            .where(
+                UserModel.id == user_id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found.",
+            )
+
+        return user
+
     @staticmethod
     async def register(
         user_data: UserRegistrationRequestSchema,
@@ -395,10 +421,7 @@ class AccountsService:
                 detail="Refresh token not found.",
             )
 
-        stmt = select(UserModel).filter_by(id=user_id)
-
-        result = await db.execute(stmt)
-        user = result.scalars().first()
+        user = await AccountsService._get_user_or_404(user_id, db)
 
         if not user:
             raise HTTPException(
@@ -427,12 +450,7 @@ class AccountsService:
             db: AsyncSession,
     ) -> MessageResponseSchema:
 
-        stmt = select(UserModel).where(
-            UserModel.id == user_id
-        )
-
-        result = await db.execute(stmt)
-        user = result.scalar_one_or_none()
+        user = await AccountsService._get_user_or_404(user_id, db)
 
         if not user:
             raise HTTPException(
@@ -542,19 +560,52 @@ class AccountsService:
             user_id: int,
             db: AsyncSession,
     ) -> None:
-        stmt = select(UserModel).where(
-            UserModel.id == user_id
-        )
-
-        result = await db.execute(stmt)
-        user = result.scalar_one_or_none()
+        user = await AccountsService._get_user_or_404(user_id=user_id, db=db)
 
         if user.is_active:
             raise HTTPException(
-                409,
-                "User is already active.",
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User is already activated.",
             )
 
         user.is_active = True
+
+        await db.commit()
+
+    @staticmethod
+    async def update_user_group(
+            user_id: int,
+            group: UserGroupEnum,
+            db: AsyncSession,
+    ) -> None:
+        user = await AccountsService._get_user_or_404(
+            user_id=user_id,
+            db=db,
+        )
+
+        stmt = (
+            select(UserGroupModel)
+            .where(
+                UserGroupModel.name == group,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        user_group = result.scalar_one_or_none()
+
+        if user_group is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Group not found.",
+            )
+
+        if user.group_id == user_group.id:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="User already belongs to this group.",
+            )
+
+        user.group = user_group
 
         await db.commit()
