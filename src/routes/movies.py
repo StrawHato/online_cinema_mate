@@ -16,11 +16,10 @@ from src.schemas.movies import (
     MovieResponseSchema,
     MovieListResponseSchema,
     MovieUpdateRequestSchema,
-    GenreResponseSchema,
 )
 from src.security.http import get_current_admin
 from src.database.models.accounts import UserModel
-from src.services.movies import MovieService, GenreService
+from src.services.movies import MovieService
 
 router = APIRouter(
     prefix="/movies",
@@ -85,18 +84,6 @@ async def get_movies(
         imdb_max=imdb_max,
         sort=sort,
     )
-
-
-@router.get(
-    "/genres/",
-    response_model=list[GenreResponseSchema],
-    summary="Get genres list",
-)
-async def get_genres(
-    db: AsyncSession = Depends(get_db),
-) -> list[GenreResponseSchema]:
-
-    return await GenreService.get_genres(db)
 
 
 @router.get(
