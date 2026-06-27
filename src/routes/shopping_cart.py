@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.database.models.accounts import UserModel
 from src.database.session import get_db
 from src.schemas.shopping_cart import CartResponseSchema
-from src.security.http import get_current_user
+from src.security.http import get_current_user, get_current_admin
 from src.services.shopping_cart import ShoppingCartService
 
 
@@ -92,4 +92,21 @@ async def remove_movie_from_cart(
 
     return Response(
         status_code=status.HTTP_204_NO_CONTENT,
+    )
+
+
+@router.get(
+    "/admin/{user_id}/",
+    response_model=CartResponseSchema,
+    summary="Get user cart",
+)
+async def get_user_cart(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+) -> CartResponseSchema:
+
+    return await ShoppingCartService.get_user_cart(
+        user_id=user_id,
+        db=db,
     )
