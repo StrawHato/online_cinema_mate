@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models.accounts import UserModel
-from src.security.http import get_current_user
+from src.security.http import get_current_user, get_current_admin
 from src.config.dependencies import (
     get_accounts_email_notificator,
     get_jwt_auth_manager,
@@ -167,5 +167,19 @@ async def resend_activation_token(
 ):
     return await AccountsService.resend_activation_token(
         data=data,
+        db=db,
+    )
+
+
+@router.post(
+    "/admin/users/{user_id}/activate/"
+)
+async def activate_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+):
+    return await AccountsService.activate_user(
+        user_id=user_id,
         db=db,
     )

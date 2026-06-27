@@ -536,3 +536,25 @@ class AccountsService:
         return MessageResponseSchema(
             message="Activation email sent."
         )
+
+    @staticmethod
+    async def activate_user(
+            user_id: int,
+            db: AsyncSession,
+    ) -> None:
+        stmt = select(UserModel).where(
+            UserModel.id == user_id
+        )
+
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if user.is_active:
+            raise HTTPException(
+                409,
+                "User is already active.",
+            )
+
+        user.is_active = True
+
+        await db.commit()
