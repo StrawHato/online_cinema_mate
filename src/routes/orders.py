@@ -38,3 +38,23 @@ async def create_order(
         current_user=current_user,
         db=db,
     )
+
+
+@router.get(
+    "/",
+    response_model=OrderListResponseSchema,
+    summary="Get my orders",
+)
+async def get_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=20),
+) -> OrderListResponseSchema:
+
+    return await OrderService.get_orders(
+        current_user=current_user,
+        db=db,
+        page=page,
+        page_size=page_size,
+    )
