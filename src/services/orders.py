@@ -209,3 +209,18 @@ class OrderService:
                 for order in orders
             ],
         )
+
+    @staticmethod
+    async def get_order(
+            order_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> OrderResponseSchema:
+
+        order = await OrderService._get_order_or_404(
+            order_uuid=order_uuid,
+            current_user=current_user,
+            db=db,
+        )
+
+        return OrderService._to_order_response(order)
