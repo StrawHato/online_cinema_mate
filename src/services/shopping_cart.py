@@ -1,5 +1,6 @@
 from decimal import Decimal
 
+from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -15,6 +16,7 @@ from src.schemas.shopping_cart import (
     CartMovieResponseSchema,
     CartResponseSchema,
 )
+from src.services.movies import MovieService
 
 
 class ShoppingCartService:
@@ -109,3 +111,41 @@ class ShoppingCartService:
             total_price=total_price,
             items=items,
         )
+
+    @staticmethod
+    async def add_movie_to_cart(
+        movie_uuid: str,
+        current_user: UserModel,
+        db: AsyncSession,
+    ) -> None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid,
+            db,
+        )
+
+        cart = await ShoppingCartService._get_or_create_cart(
+            current_user=current_user,
+            db=db,
+        )
+
+        existing = await ShoppingCartService._get_cart_item_or_404(
+            cart.id,
+            movie.id,
+            db,
+        )
+
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Movie is already in cart.",
+            )
+
+        cart_item = CartItemModel(
+            cart_id=cart.id,
+            movie_id=movie.id,
+        )
+
+        db.add(cart_item)
+
+        await db.commit()
