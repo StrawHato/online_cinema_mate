@@ -90,3 +90,59 @@ class OrderModel(Base):
             f"status='{self.status.value}'"
             f")>"
         )
+
+
+class OrderItemModel(Base):
+    __tablename__ = "order_items"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+    )
+
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "orders.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+    )
+
+    movie_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "movies.id",
+            ondelete="RESTRICT",
+        ),
+        nullable=False,
+    )
+
+    price_at_order: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+    )
+
+    order: Mapped["OrderModel"] = relationship(
+        "OrderModel",
+        back_populates="items",
+        lazy="selectin",
+    )
+
+    movie: Mapped["MovieModel"] = relationship(
+        "MovieModel",
+        back_populates="order_items",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "price_at_order >= 0",
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<OrderItem("
+            f"id={self.id}, "
+            f"order_id={self.order_id}, "
+            f"movie_id={self.movie_id}"
+            f")>"
+        )
