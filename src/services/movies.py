@@ -19,6 +19,7 @@ from src.database.models.movies import (
     DirectorModel,
     MovieModel,
     MovieSortEnum,
+    UserFavoriteMovieModel,
 )
 
 
@@ -155,6 +156,37 @@ class MovieService:
         return movie_directors
 
     @staticmethod
+    async def _get_movie_or_404(
+            movie_uuid: str,
+            db: AsyncSession,
+    ) -> MovieModel:
+
+        stmt = (
+            select(MovieModel)
+            .options(
+                selectinload(MovieModel.certification),
+                selectinload(MovieModel.genres),
+                selectinload(MovieModel.stars),
+                selectinload(MovieModel.directors),
+            )
+            .where(
+                MovieModel.uuid == movie_uuid,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        movie = result.scalar_one_or_none()
+
+        if movie is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Movie not found.",
+            )
+
+        return movie
+
+    @staticmethod
     async def create_movie(
             movie_data: MovieCreateRequestSchema,
             db: AsyncSession,
@@ -222,30 +254,7 @@ class MovieService:
             movie_uuid: str,
             db: AsyncSession,
     ) -> MovieResponseSchema:
-
-        stmt = (
-            select(MovieModel)
-            .options(
-                selectinload(MovieModel.certification),
-                selectinload(MovieModel.genres),
-                selectinload(MovieModel.stars),
-                selectinload(MovieModel.directors),
-            )
-            .where(
-                MovieModel.uuid == movie_uuid
-            )
-        )
-
-        result = await db.execute(stmt)
-
-        movie = result.scalar_one_or_none()
-
-        if movie is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Movie not found.",
-            )
-
+        movie = await MovieService._get_movie_or_404(db=db, movie_uuid=movie_uuid)
         return MovieResponseSchema.model_validate(movie)
 
     @staticmethod
@@ -261,6 +270,7 @@ class MovieService:
             imdb_min: Decimal | None = None,
             imdb_max: Decimal | None = None,
             sort: MovieSortEnum = MovieSortEnum.NAME_ASC,
+            favorite_user_id: int | None = None
     ) -> MovieListResponseSchema:
 
         stmt = (
@@ -272,6 +282,18 @@ class MovieService:
                 selectinload(MovieModel.directors),
             )
         )
+
+        if favorite_user_id:
+            stmt = (
+                stmt
+                .join(
+                    UserFavoriteMovieModel,
+                    UserFavoriteMovieModel.movie_id == MovieModel.id,
+                )
+                .where(
+                    UserFavoriteMovieModel.user_id == favorite_user_id,
+                )
+            )
 
         if search:
             stmt = (
