@@ -157,3 +157,55 @@ class OrderService:
         await db.refresh(order)
 
         return OrderService._to_order_response(order)
+
+    @staticmethod
+    async def get_orders(
+        current_user: UserModel,
+        db: AsyncSession,
+        page: int,
+        page_size: int,
+    ) -> OrderListResponseSchema:
+
+        count_stmt = (
+            select(func.count(OrderModel.id))
+            .where(
+                OrderModel.user_id == current_user.id,
+            )
+        )
+
+        total = await db.scalar(count_stmt) or 0
+
+        stmt = (
+            select(OrderModel)
+            .options(
+                selectinload(OrderModel.items)
+                .selectinload(OrderItemModel.movie)
+            )
+            .where(
+                OrderModel.user_id == current_user.id,
+            )
+            .order_by(OrderModel.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        result = await db.execute(stmt)
+
+        orders = result.scalars().all()
+
+        total_pages = (
+            (total + page_size - 1) // page_size
+            if total
+            else 1
+        )
+
+        return OrderListResponseSchema(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            items=[
+                OrderResponseSchema.model_validate(order)
+                for order in orders
+            ],
+        )
