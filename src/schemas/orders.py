@@ -40,3 +40,13 @@ class OrderResponseSchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class OrderListResponseSchema(BaseModel):
+    total: int
+
+    page: int = 1
+    page_size: int = 10
+    total_pages: int
+
+    items: list[OrderResponseSchema]
