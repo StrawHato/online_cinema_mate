@@ -19,7 +19,7 @@ from sqlalchemy.orm import (
 )
 
 from src.database.models.base import Base
-from src.database.models.payments import PaymentModel
+from src.database.models.payments import PaymentModel, PaymentItemModel
 
 
 class OrderStatusEnum(str, Enum):
@@ -145,6 +145,12 @@ class OrderItemModel(Base):
     movie: Mapped["MovieModel"] = relationship(
         "MovieModel",
         back_populates="order_items",
+        lazy="selectin",
+    )
+
+    payment_items: Mapped[list["PaymentItemModel"]] = relationship(
+        "PaymentItemModel",
+        back_populates="order_item",
         lazy="selectin",
     )
 

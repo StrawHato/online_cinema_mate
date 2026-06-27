@@ -117,3 +117,61 @@ class PaymentModel(Base):
             f"status='{self.status.value}'"
             f")>"
         )
+
+
+class PaymentItemModel(Base):
+    __tablename__ = "payment_items"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+    )
+
+    payment_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "payments.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    order_item_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "order_items.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    price_at_payment: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False,
+    )
+
+    payment: Mapped["PaymentModel"] = relationship(
+        "PaymentModel",
+        back_populates="items",
+        lazy="selectin",
+    )
+
+    order_item: Mapped["OrderItemModel"] = relationship(
+        "OrderItemModel",
+        back_populates="payment_items",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            "price_at_payment >= 0",
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<PaymentItem("
+            f"id={self.id}, "
+            f"payment_id={self.payment_id}, "
+            f"order_item_id={self.order_item_id}"
+            f")>"
+        )
