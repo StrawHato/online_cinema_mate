@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter,
     Depends,
     status,
+    Response
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +12,7 @@ from src.schemas.genres import (
     GenreCreateRequestSchema,
     GenreDetailResponseSchema,
     GenreResponseSchema,
+    GenreUpdateRequestSchema,
 )
 from src.security.http import get_current_admin
 from src.services.genres import GenreService
@@ -63,4 +65,42 @@ async def create_genre(
     return await GenreService.create_genre(
         db=db,
         genre_data=genre_data,
+    )
+
+
+@router.patch(
+    "/{genre_id}/",
+    response_model=GenreDetailResponseSchema,
+)
+async def update_genre(
+    genre_id: int,
+    genre_data: GenreUpdateRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+):
+
+    return await GenreService.update_genre(
+        genre_id=genre_id,
+        genre_data=genre_data,
+        db=db,
+    )
+
+
+@router.delete(
+    "/{genre_id}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_genre(
+    genre_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+) -> Response:
+
+    await GenreService.delete_genre(
+        genre_id=genre_id,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
     )
