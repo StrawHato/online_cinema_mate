@@ -25,3 +25,14 @@ class CartItemResponseSchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class CartResponseSchema(BaseModel):
+    total_movies: int
+    total_price: Decimal
+
+    items: list[CartItemResponseSchema]
+
+    model_config = {
+        "from_attributes": True,
+    }
