@@ -1,15 +1,13 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models.accounts import UserModel
-from src.security.http import get_current_user
+from src.security.http import get_current_user, get_current_admin
 from src.config.dependencies import (
-    get_accounts_email_notificator,
     get_jwt_auth_manager,
 )
 from src.config.settings import Settings, get_settings
 from src.database.session import get_db
-from src.notifications.interfaces import EmailSenderInterface
 from src.schemas.accounts import (
     MessageResponseSchema,
     PasswordResetCompleteRequestSchema,
@@ -24,6 +22,7 @@ from src.schemas.accounts import (
     ChangePasswordRequestSchema,
     LogoutRequestSchema,
     ResendActivationRequestSchema,
+    UserGroupUpdateRequestSchema,
 )
 from src.security.interfaces import JWTAuthManagerInterface
 from src.services.accounts import AccountsService
@@ -168,4 +167,48 @@ async def resend_activation_token(
     return await AccountsService.resend_activation_token(
         data=data,
         db=db,
+    )
+
+
+@router.patch(
+    "/admin/users/{user_id}/activate/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Activate user",
+)
+async def activate_user(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+) -> Response:
+
+    await AccountsService.activate_user(
+        user_id=user_id,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+
+
+@router.patch(
+    "/admin/users/{user_id}/group/",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Update user group",
+)
+async def update_user_group(
+    user_id: int,
+    data: UserGroupUpdateRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_admin),
+) -> Response:
+
+    await AccountsService.update_user_group(
+        user_id=user_id,
+        group=data.group,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
     )

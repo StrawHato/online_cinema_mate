@@ -103,6 +103,13 @@ class UserModel(Base):
         cascade="all, delete-orphan",
     )
 
+    orders: Mapped[list["OrderModel"]] = relationship(
+        "OrderModel",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
 

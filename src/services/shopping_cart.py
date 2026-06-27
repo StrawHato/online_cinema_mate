@@ -56,7 +56,7 @@ class ShoppingCartService:
         return cart
 
     @staticmethod
-    async def _get_cart_item(
+    async def _get_cart_item_for_movie(
         cart_id: int,
         movie_id: int,
         db: AsyncSession,
@@ -75,22 +75,15 @@ class ShoppingCartService:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_cart(
-        current_user: UserModel,
-        db: AsyncSession,
+    def _to_cart_response(
+            cart: CartModel,
     ) -> CartResponseSchema:
-
-        cart = await ShoppingCartService._get_or_create_cart(
-            current_user=current_user,
-            db=db,
-        )
 
         total_price = Decimal("0")
 
         items = []
 
         for item in cart.items:
-
             total_price += item.movie.price
 
             items.append(
@@ -117,6 +110,19 @@ class ShoppingCartService:
         )
 
     @staticmethod
+    async def get_cart(
+        current_user: UserModel,
+        db: AsyncSession,
+    ) -> CartResponseSchema:
+
+        cart = await ShoppingCartService._get_or_create_cart(
+            current_user=current_user,
+            db=db,
+        )
+
+        return await ShoppingCartService._to_cart_response(cart)
+
+    @staticmethod
     async def add_movie_to_cart(
         movie_uuid: str,
         current_user: UserModel,
@@ -133,7 +139,7 @@ class ShoppingCartService:
             db=db,
         )
 
-        existing = await ShoppingCartService._get_cart_item(
+        existing = await ShoppingCartService._get_cart_item_for_movie(
             cart.id,
             movie.id,
             db,
@@ -171,7 +177,7 @@ class ShoppingCartService:
             db=db,
         )
 
-        cart_item = await ShoppingCartService._get_cart_item(
+        cart_item = await ShoppingCartService._get_cart_item_for_movie(
             cart.id,
             movie.id,
             db,
@@ -202,3 +208,29 @@ class ShoppingCartService:
             await db.delete(item)
 
         await db.commit()
+
+    @staticmethod
+    async def get_user_cart(
+            user_id: int,
+            db: AsyncSession,
+    ) -> CartResponseSchema:
+        stmt = (
+            select(UserModel).where(
+                UserModel.id == user_id,
+            )
+        )
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found.",
+            )
+
+        cart = await ShoppingCartService._get_or_create_cart(
+            current_user=user,
+            db=db,
+        )
+
+        return ShoppingCartService._to_cart_response(cart)

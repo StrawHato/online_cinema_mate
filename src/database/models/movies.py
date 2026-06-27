@@ -322,6 +322,12 @@ class MovieModel(Base):
         back_populates="movie",
     )
 
+    order_items: Mapped[list["OrderItemModel"]] = relationship(
+        "OrderItemModel",
+        back_populates="movie",
+        lazy="selectin",
+    )
+
     __table_args__ = (
         CheckConstraint("imdb >= 0 AND imdb <= 10"),
         CheckConstraint("price >= 0"),

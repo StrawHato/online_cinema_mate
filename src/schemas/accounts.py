@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
 
+from src.database.models.accounts import UserGroupEnum
 from src.database.validators import accounts as accounts_validators
 
 
@@ -83,3 +84,7 @@ class LogoutRequestSchema(BaseModel):
 
 class ResendActivationRequestSchema(BaseModel):
     email: EmailStr
+
+
+class UserGroupUpdateRequestSchema(BaseModel):
+    group: UserGroupEnum
