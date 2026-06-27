@@ -6,6 +6,7 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.database.models.accounts import UserModel
 from src.schemas.movies import (
     MovieResponseSchema,
     MovieCreateRequestSchema,
@@ -502,4 +503,41 @@ class MovieService:
         # Prevent deleting movies that have been purchased.
 
         await db.delete(movie)
+        await db.commit()
+
+    @staticmethod
+    async def add_to_favorites(
+            movie_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid,
+            db,
+        )
+
+        stmt = (
+            select(UserFavoriteMovieModel)
+            .where(
+                UserFavoriteMovieModel.user_id == current_user.id,
+                UserFavoriteMovieModel.movie_id == movie.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        if result.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Movie is already in favorites.",
+            )
+
+        favorite = UserFavoriteMovieModel(
+            user_id=current_user.id,
+            movie_id=movie.id,
+        )
+
+        db.add(favorite)
+
         await db.commit()
