@@ -1,6 +1,8 @@
 from fastapi import (
     APIRouter,
     Depends,
+    Response,
+    status,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,4 +31,25 @@ async def get_cart(
     return await ShoppingCartService.get_cart(
         current_user=current_user,
         db=db,
+    )
+
+
+@router.post(
+    "/{movie_uuid}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def add_movie_to_cart(
+    movie_uuid: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+) -> Response:
+
+    await ShoppingCartService.add_movie_to_cart(
+        movie_uuid=movie_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
     )
