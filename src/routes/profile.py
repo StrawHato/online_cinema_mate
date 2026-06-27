@@ -1,6 +1,12 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    status,
+    Query,
+    Response
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.database.models.movies import MovieSortEnum
@@ -93,3 +99,41 @@ async def get_favorite_movies(
         sort=sort,
         favorite_user_id=current_user.id,
     )
+
+
+@router.post(
+    "/favorites/{movie_uuid}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def add_to_favorites(
+    movie_uuid: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+
+    await MovieService.add_to_favorites(
+        movie_uuid=movie_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete(
+    "/favorites/{movie_uuid}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def remove_from_favorites(
+    movie_uuid: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_user),
+):
+
+    await MovieService.remove_from_favorites(
+        movie_uuid=movie_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
