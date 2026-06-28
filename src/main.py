@@ -8,6 +8,7 @@ from src.routes import (
     actors_router,
     cart_router,
     order_router,
+    payment_router,
 )
 
 app = FastAPI(
@@ -24,3 +25,4 @@ app.include_router(genres_router, prefix=f"{api_version_prefix}")
 app.include_router(actors_router, prefix=f"{api_version_prefix}")
 app.include_router(cart_router, prefix=f"{api_version_prefix}")
 app.include_router(order_router, prefix=f"{api_version_prefix}")
+app.include_router(payment_router, prefix=f"{api_version_prefix}")
