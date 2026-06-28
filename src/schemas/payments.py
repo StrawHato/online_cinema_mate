@@ -16,11 +16,17 @@ class PaymentItemResponseSchema(BaseModel):
 
 class PaymentResponseSchema(BaseModel):
     uuid: str
-
     created_at: datetime
-
     status: PaymentStatusEnum
-
     amount: Decimal
 
     items: list[PaymentItemResponseSchema]
+
+
+class PaymentListResponseSchema(BaseModel):
+    total: int
+    page: int = 1
+    page_size: int = 10
+    total_pages: int
+
+    items: list[PaymentResponseSchema]
