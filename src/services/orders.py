@@ -80,6 +80,19 @@ class OrderService:
         )
 
     @staticmethod
+    def _calculate_actual_amount(
+            order: OrderModel,
+    ) -> Decimal:
+
+        return sum(
+            (
+                item.movie.price
+                for item in order.items
+            ),
+            start=Decimal("0"),
+        )
+
+    @staticmethod
     async def create_order(
         current_user: UserModel,
         db: AsyncSession,
