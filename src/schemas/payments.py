@@ -11,7 +11,7 @@ class PaymentItemResponseSchema(BaseModel):
     id: int
     price_at_payment: Decimal
 
-    order_item: OrderMovieResponseSchema
+    movie: OrderMovieResponseSchema
 
 
 class PaymentResponseSchema(BaseModel):
@@ -30,3 +30,7 @@ class PaymentListResponseSchema(BaseModel):
     total_pages: int
 
     items: list[PaymentResponseSchema]
+
+
+class CheckoutResponseSchema(BaseModel):
+    checkout_url: str
