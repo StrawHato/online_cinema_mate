@@ -35,6 +35,7 @@ class StripeService:
         try:
             session = stripe.checkout.Session.create(
                 mode="payment",
+                payment_method_types=["card"],
                 customer_email=current_user.email,
                 line_items=[
                     {
@@ -43,9 +44,7 @@ class StripeService:
                             "product_data": {
                                 "name": item.movie.name,
                             },
-                            "unit_amount": int(
-                                Decimal(item.movie.price) * 100
-                            ),
+                            "unit_amount": int(item.movie.price * 100),
                         },
                         "quantity": 1,
                     }
@@ -55,9 +54,21 @@ class StripeService:
                     "order_uuid": order.uuid,
                     "user_id": str(current_user.id),
                 },
+                payment_intent_data={
+                    "metadata": {
+                        "order_uuid": order.uuid,
+                        "user_id": str(current_user.id),
+                    }
+                },
                 success_url=self.success_url,
                 cancel_url=self.cancel_url,
             )
+
+            if session.url is None:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Stripe did not return checkout URL.",
+                )
 
             return session.url
 
