@@ -9,6 +9,7 @@ from src.security.interfaces import JWTAuthManagerInterface
 from src.security.token_manager import JWTAuthManager
 from src.storages.interfaces import StorageInterface
 from src.storages.s3 import S3Storage
+from src.payments.stripe import StripeService
 
 
 @lru_cache
@@ -48,4 +49,13 @@ def get_storage(
         access_key=settings.S3_ACCESS_KEY,
         secret_key=settings.S3_SECRET_KEY,
         bucket_name=settings.S3_BUCKET_NAME,
+    )
+
+
+@lru_cache
+def get_stripe_service() -> StripeService:
+    settings = get_settings()
+
+    return StripeService(
+        secret_key=settings.STRIPE_SECRET_KEY,
     )
