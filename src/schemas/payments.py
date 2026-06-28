@@ -13,6 +13,10 @@ class PaymentItemResponseSchema(BaseModel):
 
     movie: OrderMovieResponseSchema
 
+    model_config = {
+        "from_attributes": True,
+    }
+
 
 class PaymentResponseSchema(BaseModel):
     uuid: str
@@ -22,6 +26,10 @@ class PaymentResponseSchema(BaseModel):
 
     items: list[PaymentItemResponseSchema]
 
+    model_config = {
+        "from_attributes": True,
+    }
+
 
 class PaymentListResponseSchema(BaseModel):
     total: int
@@ -30,6 +38,10 @@ class PaymentListResponseSchema(BaseModel):
     total_pages: int
 
     items: list[PaymentResponseSchema]
+
+    model_config = {
+        "from_attributes": True,
+    }
 
 
 class CheckoutResponseSchema(BaseModel):
