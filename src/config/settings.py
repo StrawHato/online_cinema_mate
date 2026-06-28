@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     S3_SECRET_KEY: str
     S3_BUCKET_NAME: str
 
+    STRIPE_SECRET_KEY: str
+    STRIPE_PUBLIC_KEY: str
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",
