@@ -58,4 +58,7 @@ def get_stripe_service() -> StripeService:
 
     return StripeService(
         secret_key=settings.STRIPE_SECRET_KEY,
+        webhook_secret=settings.STRIPE_WEBHOOK_SECRET,
+        success_url=settings.STRIPE_SUCCESS_URL,
+        cancel_url=settings.STRIPE_CANCEL_URL,
     )
