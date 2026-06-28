@@ -91,3 +91,19 @@ class StripeService:
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid webhook payload.",
             )
+
+    def create_refund(
+        self,
+        payment_intent_id: str,
+    ) -> stripe.Refund:
+
+        try:
+            return stripe.Refund.create(
+                payment_intent=payment_intent_id,
+            )
+
+        except StripeError as error:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail=str(error),
+            )
