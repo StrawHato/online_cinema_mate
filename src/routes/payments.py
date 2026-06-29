@@ -13,7 +13,7 @@ from src.database.session import get_db
 from src.security.http import get_current_user
 from src.config.dependencies import get_stripe_service
 from src.payments.stripe import StripeService
-from src.schemas.payments import CheckoutResponseSchema
+from src.schemas.payments import CheckoutResponseSchema, PaymentResponseSchema
 from src.services.payments import PaymentService
 
 
@@ -68,4 +68,21 @@ async def stripe_webhook(
 
     return Response(
         status_code=status.HTTP_200_OK,
+    )
+
+
+@router.get(
+    "/{payment_uuid}/",
+    response_model=PaymentResponseSchema,
+)
+async def get_payment(
+    payment_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaymentResponseSchema:
+
+    return await PaymentService.get_payment(
+        payment_uuid=payment_uuid,
+        current_user=current_user,
+        db=db,
     )
