@@ -1,6 +1,9 @@
 from fastapi import (
     APIRouter,
     Depends,
+    Request,
+    Response,
+    status
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,4 +39,33 @@ async def create_checkout_session(
         current_user=current_user,
         db=db,
         stripe_service=stripe_service,
+    )
+
+
+@router.post(
+    "/webhook/",
+    status_code=status.HTTP_200_OK,
+)
+async def stripe_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    stripe_service: StripeService = Depends(get_stripe_service),
+) -> Response:
+
+    payload = await request.body()
+
+    signature = request.headers.get(
+        "Stripe-Signature",
+        "",
+    )
+
+    await PaymentService.process_webhook(
+        payload=payload,
+        signature=signature,
+        stripe_service=stripe_service,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_200_OK,
     )
