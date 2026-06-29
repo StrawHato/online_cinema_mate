@@ -23,6 +23,7 @@ from src.schemas.payments import (
 )
 from src.schemas.orders import OrderMovieResponseSchema
 from src.services.orders import OrderService
+from src.tasks.payments import send_payment_success_email
 
 
 class PaymentService:
@@ -188,7 +189,7 @@ class PaymentService:
 
         session: Session = event["data"]["object"]
 
-        metadata = session.metadata or {}
+        metadata = session.metadata
 
         if metadata is None:
             return
@@ -256,3 +257,7 @@ class PaymentService:
         order.status = OrderStatusEnum.PAID
 
         await db.commit()
+
+        send_payment_success_email.delay(
+            payment.id,
+        )

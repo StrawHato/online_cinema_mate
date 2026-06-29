@@ -14,6 +14,7 @@ celery_app = Celery(
 
 import src.tasks.accounts
 import src.tasks.emails
+import src.tasks.payments
 
 celery_app.conf.timezone = "UTC"
 
