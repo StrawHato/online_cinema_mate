@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi import HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -307,6 +309,94 @@ class PaymentService:
             .where(
                 PaymentModel.user_id == current_user.id,
             )
+            .order_by(PaymentModel.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        result = await db.execute(stmt)
+
+        payments = result.scalars().all()
+
+        total_pages = (
+            (total + page_size - 1) // page_size
+            if total
+            else 1
+        )
+
+        return PaymentListResponseSchema(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            items=[
+                PaymentService._to_payment_response(payment)
+                for payment in payments
+            ],
+        )
+
+    @staticmethod
+    async def get_all_payments(
+            db: AsyncSession,
+            page: int,
+            page_size: int,
+            user_id: int | None = None,
+            status: PaymentStatusEnum | None = None,
+            created_from: datetime | None = None,
+            created_to: datetime | None = None,
+    ) -> PaymentListResponseSchema:
+
+        count_stmt = select(func.count(PaymentModel.id))
+
+        stmt = (
+            select(PaymentModel)
+            .options(
+                selectinload(PaymentModel.items)
+                .selectinload(PaymentItemModel.order_item)
+                .selectinload(OrderItemModel.movie)
+            )
+        )
+
+        if user_id is not None:
+            count_stmt = count_stmt.where(
+                PaymentModel.user_id == user_id,
+            )
+
+            stmt = stmt.where(
+                PaymentModel.user_id == user_id,
+            )
+
+        if status is not None:
+            count_stmt = count_stmt.where(
+                PaymentModel.status == status,
+            )
+
+            stmt = stmt.where(
+                PaymentModel.status == status,
+            )
+
+        if created_from is not None:
+            count_stmt = count_stmt.where(
+                PaymentModel.created_at >= created_from,
+            )
+
+            stmt = stmt.where(
+                PaymentModel.created_at >= created_from,
+            )
+
+        if created_to is not None:
+            count_stmt = count_stmt.where(
+                PaymentModel.created_at <= created_to,
+            )
+
+            stmt = stmt.where(
+                PaymentModel.created_at <= created_to,
+            )
+
+        total = await db.scalar(count_stmt) or 0
+
+        stmt = (
+            stmt
             .order_by(PaymentModel.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
