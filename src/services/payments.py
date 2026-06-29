@@ -2,8 +2,13 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from stripe.checkout import Session
 
-from src.database.models.payments import PaymentModel, PaymentItemModel
+from src.database.models.payments import (
+    PaymentModel,
+    PaymentItemModel,
+    PaymentStatusEnum
+)
 from src.payments.stripe import StripeService
 from src.database.models.accounts import UserModel
 from src.database.models.orders import (
@@ -164,3 +169,84 @@ class PaymentService:
         return CheckoutResponseSchema(
             checkout_url=checkout_url,
         )
+
+    @staticmethod
+    async def process_webhook(
+            payload: bytes,
+            signature: str,
+            stripe_service: StripeService,
+            db: AsyncSession,
+    ) -> None:
+
+        event = stripe_service.verify_webhook(
+            payload=payload,
+            signature=signature,
+        )
+
+        if event["type"] != "checkout.session.completed":
+            return
+
+        session: Session = event["data"]["object"]
+
+        metadata = session.get("metadata", {})
+
+        order_uuid = metadata.get("order_uuid")
+
+        if order_uuid is None:
+            return
+
+        stmt = (
+            select(OrderModel)
+            .options(
+                selectinload(OrderModel.items)
+                .selectinload(OrderItemModel.movie)
+            )
+            .where(
+                OrderModel.uuid == order_uuid,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        order = result.scalar_one_or_none()
+
+        if order is None:
+            return
+
+        if order.status == OrderStatusEnum.PAID:
+            return
+
+        existing_payment = (
+            await PaymentService._get_payment_by_order(
+                order_id=order.id,
+                db=db,
+            )
+        )
+
+        if existing_payment is not None:
+            return
+
+        payment = PaymentModel(
+            user_id=order.user_id,
+            order_id=order.id,
+            amount=order.total_amount,
+            status=PaymentStatusEnum.SUCCESSFUL,
+            external_payment_id=session.get("payment_intent"),
+        )
+
+        db.add(payment)
+
+        await db.flush()
+
+        for order_item in order.items:
+            payment_item = PaymentItemModel(
+                payment_id=payment.id,
+                order_item_id=order_item.id,
+                price_at_payment=order_item.price_at_order,
+            )
+
+            db.add(payment_item)
+
+        order.status = OrderStatusEnum.PAID
+
+        await db.commit()
