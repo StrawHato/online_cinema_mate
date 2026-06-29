@@ -11,7 +11,7 @@ from fastapi import (
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.payments import PaymentStatusEnum
+from src.database.models.payments import PaymentStatusEnum
 from src.database.models.accounts import UserModel
 from src.database.session import get_db
 from src.security.http import get_current_user, get_current_admin
