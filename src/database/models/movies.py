@@ -263,6 +263,18 @@ class MovieModel(Base):
         nullable=False,
     )
 
+    average_rating: Mapped[Decimal] = mapped_column(
+        Numeric(3, 2),
+        default=0,
+        nullable=False,
+    )
+
+    ratings_count: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
     meta_score: Mapped[Optional[int]] = mapped_column(
         Integer,
         nullable=True,
