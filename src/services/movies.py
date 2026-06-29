@@ -670,3 +670,27 @@ class MovieService:
         )
 
         await db.commit()
+
+    @staticmethod
+    async def get_user_rating(
+            movie_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieRatingModel | None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        stmt = (
+            select(MovieRatingModel)
+            .where(
+                MovieRatingModel.movie_id == movie.id,
+                MovieRatingModel.user_id == current_user.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
