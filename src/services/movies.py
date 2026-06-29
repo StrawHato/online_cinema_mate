@@ -16,7 +16,7 @@ from src.schemas.movies import (
     MovieResponseSchema,
     MovieCreateRequestSchema,
     MovieListResponseSchema,
-    MovieUpdateRequestSchema,
+    MovieUpdateRequestSchema, MovieRatingRequestSchema,
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -26,6 +26,7 @@ from src.database.models.movies import (
     MovieModel,
     MovieSortEnum,
     UserFavoriteMovieModel,
+    MovieRatingModel,
 )
 
 
@@ -191,6 +192,32 @@ class MovieService:
             )
 
         return movie
+
+    @staticmethod
+    async def _recalculate_rating(
+            movie: MovieModel,
+            db: AsyncSession,
+    ) -> None:
+        stmt = (
+            select(
+                func.avg(MovieRatingModel.rating),
+                func.count(MovieRatingModel.id),
+            )
+            .where(
+                MovieRatingModel.movie_id == movie.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        average, count = result.one()
+
+        movie.average_rating = round(
+            average or 0,
+            2,
+        )
+
+        movie.ratings_count = count
 
     @staticmethod
     async def create_movie(
