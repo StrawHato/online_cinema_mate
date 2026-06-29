@@ -26,7 +26,10 @@ from src.schemas.payments import (
 )
 from src.schemas.orders import OrderMovieResponseSchema
 from src.services.orders import OrderService
-from src.tasks.payments import send_payment_success_email
+from src.tasks.payments import (
+    send_payment_success_email_task,
+    send_payment_refunded_email_task
+)
 
 
 class PaymentService:
@@ -67,9 +70,10 @@ class PaymentService:
         stmt = (
             select(PaymentModel)
             .options(
+                selectinload(PaymentModel.order),
                 selectinload(PaymentModel.items)
                 .selectinload(PaymentItemModel.order_item)
-                .selectinload(OrderItemModel.movie)
+                .selectinload(OrderItemModel.movie),
             )
             .where(
                 PaymentModel.uuid == payment_uuid,
@@ -261,7 +265,7 @@ class PaymentService:
 
         await db.commit()
 
-        send_payment_success_email.delay(
+        send_payment_success_email_task.delay(
             payment.id,
         )
 
@@ -421,4 +425,50 @@ class PaymentService:
                 PaymentService._to_payment_response(payment)
                 for payment in payments
             ],
+        )
+
+    @staticmethod
+    async def refund_payment(
+            payment_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+            stripe_service: StripeService,
+    ) -> None:
+
+        payment = await PaymentService._get_payment_or_404(
+            payment_uuid=payment_uuid,
+            current_user=current_user,
+            db=db,
+        )
+
+        if payment.status == PaymentStatusEnum.REFUNDED:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Payment has already been refunded.",
+            )
+
+        if payment.status != PaymentStatusEnum.SUCCESSFUL:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Only successful payments can be refunded.",
+            )
+
+        if payment.external_payment_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="External payment ID is missing.",
+            )
+
+        stripe_service.create_refund(
+            payment.external_payment_id,
+        )
+
+        payment.status = PaymentStatusEnum.REFUNDED
+
+        payment.order.status = OrderStatusEnum.CANCELED
+
+        await db.commit()
+
+        send_payment_refunded_email_task.delay(
+            payment.id,
         )
