@@ -503,3 +503,36 @@ class PaymentService:
         send_payment_refunded_email_task.delay(
             payment.id,
         )
+
+    @staticmethod
+    async def cancel_payment(
+            payment_uuid: str,
+            db: AsyncSession,
+    ) -> None:
+
+        stmt = (
+            select(PaymentModel)
+            .options(
+                selectinload(PaymentModel.order),
+            )
+            .where(
+                PaymentModel.uuid == payment_uuid,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        payment = result.scalar_one_or_none()
+
+        if payment is None:
+            return
+
+        if payment.status != PaymentStatusEnum.PENDING:
+            return
+
+        payment.status = PaymentStatusEnum.CANCELED
+
+        if payment.order is not None:
+            payment.order.status = OrderStatusEnum.CANCELED
+
+        await db.commit()
