@@ -16,7 +16,7 @@ from src.schemas.orders import (
     OrderListResponseSchema,
     OrderResponseSchema,
 )
-from src.security.http import get_current_user, get_current_admin
+from src.security.http import get_current_moderator, get_current_user
 from src.services.orders import OrderService
 
 
@@ -110,7 +110,7 @@ async def cancel_order(
 )
 async def get_all_orders(
     db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_admin),
+    current_user: UserModel = Depends(get_current_moderator),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=20),
     user_id: int | None = None,
