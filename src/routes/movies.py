@@ -170,6 +170,23 @@ async def get_user_rating(
 
 
 @router.delete(
+    "/{movie_uuid}/rating/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_rating(
+    movie_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+
+    await MovieService.delete_rating(
+        movie_uuid=movie_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.delete(
     "/{movie_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
 )
