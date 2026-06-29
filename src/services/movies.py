@@ -212,12 +212,31 @@ class MovieService:
 
         average, count = result.one()
 
-        movie.average_rating = round(
-            average or 0,
-            2,
+        movie.average_rating = (
+            Decimal(str(average or 0))
+            .quantize(Decimal("0.01"))
         )
 
-        movie.ratings_count = count
+        movie.ratings_count = int(count or 0)
+
+    @staticmethod
+    async def _get_movie_rating(
+            movie_id: int,
+            user_id: int,
+            db: AsyncSession,
+    ) -> MovieRatingModel | None:
+
+        stmt = (
+            select(MovieRatingModel)
+            .where(
+                MovieRatingModel.movie_id == movie_id,
+                MovieRatingModel.user_id == user_id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create_movie(
@@ -683,17 +702,11 @@ class MovieService:
             db=db,
         )
 
-        stmt = (
-            select(MovieRatingModel)
-            .where(
-                MovieRatingModel.movie_id == movie.id,
-                MovieRatingModel.user_id == current_user.id,
-            )
+        return await MovieService._get_movie_rating(
+            movie_id=movie.id,
+            user_id=current_user.id,
+            db=db,
         )
-
-        result = await db.execute(stmt)
-
-        return result.scalar_one_or_none()
 
     @staticmethod
     async def delete_rating(
@@ -707,17 +720,11 @@ class MovieService:
             db=db,
         )
 
-        stmt = (
-            select(MovieRatingModel)
-            .where(
-                MovieRatingModel.movie_id == movie.id,
-                MovieRatingModel.user_id == current_user.id,
-            )
+        movie_rating = await MovieService._get_movie_rating(
+            movie_id=movie.id,
+            user_id=current_user.id,
+            db=db,
         )
-
-        result = await db.execute(stmt)
-
-        movie_rating = result.scalar_one_or_none()
 
         if movie_rating is None:
             raise HTTPException(
