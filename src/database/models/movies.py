@@ -14,7 +14,9 @@ from sqlalchemy import (
     Integer,
     CheckConstraint,
     DateTime,
-    func
+    func,
+    UniqueConstraint,
+    Index
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -328,6 +330,11 @@ class MovieModel(Base):
         lazy="selectin",
     )
 
+    ratings: Mapped[list["MovieRatingModel"]] = relationship(
+        back_populates="movie",
+        cascade="all, delete-orphan",
+    )
+
     __table_args__ = (
         CheckConstraint("imdb >= 0 AND imdb <= 10"),
         CheckConstraint("price >= 0"),
@@ -388,3 +395,45 @@ class UserFavoriteMovieModel(Base):
             f"movie_id={self.movie_id}"
             f")>"
         )
+
+
+class MovieRatingModel(Base):
+    __tablename__ = "movie_ratings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE")
+    )
+
+    movie_id: Mapped[int] = mapped_column(
+        ForeignKey("movies.id", ondelete="CASCADE")
+    )
+
+    rating: Mapped[int] = mapped_column(
+        CheckConstraint("rating >= 1 AND rating <= 10")
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        default=datetime.utcnow
+    )
+
+    user: Mapped["UserModel"] = relationship(
+        back_populates="movie_ratings"
+    )
+
+    movie: Mapped["MovieModel"] = relationship(
+        back_populates="ratings"
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "movie_id",
+            name="uq_user_movie_rating",
+        ),
+        Index(
+            "ix_movie_ratings_movie_id",
+            "movie_id",
+        ),
+    )
