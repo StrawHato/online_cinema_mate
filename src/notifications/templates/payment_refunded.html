@@ -1,0 +1,54 @@
+<html lang="">
+<head>
+  <title>Payment Refunded</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif;">
+
+<div style="border:1px solid #e0e0e0;border-radius:8px;
+padding:20px;max-width:520px;margin:40px auto;
+background:#ffffff;color:#333;box-shadow:0 4px 12px rgba(0,0,0,.1);">
+
+  <h2 style="color:#e53935;text-align:center;">
+    Payment Refunded
+  </h2>
+
+  <p>
+    Hello,
+    <strong>{{ email }}</strong>
+  </p>
+
+  <p>
+    Your refund has been successfully processed.
+  </p>
+
+  <hr>
+
+  <p><strong>Payment ID:</strong> {{ payment_uuid }}</p>
+
+  <p><strong>Refund Date:</strong> {{ refund_date }}</p>
+
+  <p><strong>Refund Amount:</strong> ${{ amount }}</p>
+
+  <p><strong>Refunded Movies:</strong></p>
+
+  <ul>
+    {% for movie in movies %}
+    <li>{{ movie }}</li>
+    {% endfor %}
+  </ul>
+
+  <p>
+    The refunded amount should appear in your account
+    according to your bank's processing time.
+  </p>
+
+  <p>Regards,</p>
+
+  <p style="color:#e53935;">
+    <i>The Mate team</i>
+  </p>
+
+</div>
+
+</body>
+</html>
