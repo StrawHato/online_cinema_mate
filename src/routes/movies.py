@@ -5,7 +5,7 @@ from fastapi import (
     Depends,
     status,
     Query,
-    Response
+    Response, HTTPException
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from src.schemas.movies import (
     MovieListResponseSchema,
     MovieUpdateRequestSchema,
     MovieRatingRequestSchema,
+    MovieRatingResponseSchema,
 )
 from src.security.http import get_current_admin, get_current_user
 from src.database.models.accounts import UserModel
@@ -138,6 +139,33 @@ async def rate_movie(
         data=data,
         current_user=current_user,
         db=db,
+    )
+
+
+@router.get(
+    "/{movie_uuid}/rating/",
+    response_model=MovieRatingResponseSchema,
+)
+async def get_user_rating(
+    movie_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MovieRatingResponseSchema:
+
+    rating = await MovieService.get_user_rating(
+        movie_uuid=movie_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    if rating is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rating not found.",
+        )
+
+    return MovieRatingResponseSchema.model_validate(
+        rating,
     )
 
 
