@@ -188,9 +188,15 @@ class PaymentService:
 
         session: Session = event["data"]["object"]
 
-        metadata = session.get("metadata", {})
+        metadata = session.metadata or {}
 
-        order_uuid = metadata.get("order_uuid")
+        if metadata is None:
+            return
+
+        try:
+            order_uuid = metadata["order_uuid"]
+        except KeyError:
+            return
 
         if order_uuid is None:
             return
@@ -231,7 +237,7 @@ class PaymentService:
             order_id=order.id,
             amount=order.total_amount,
             status=PaymentStatusEnum.SUCCESSFUL,
-            external_payment_id=session.get("payment_intent"),
+            external_payment_id=session.payment_intent,
         )
 
         db.add(payment)
