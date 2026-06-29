@@ -16,8 +16,9 @@ from src.schemas.movies import (
     MovieResponseSchema,
     MovieListResponseSchema,
     MovieUpdateRequestSchema,
+    MovieRatingRequestSchema,
 )
-from src.security.http import get_current_admin
+from src.security.http import get_current_admin, get_current_user
 from src.database.models.accounts import UserModel
 from src.services.movies import MovieService
 
@@ -117,6 +118,25 @@ async def update_movie(
     return await MovieService.update_movie(
         movie_id=movie_id,
         movie_data=movie_data,
+        db=db,
+    )
+
+
+@router.post(
+    "/{movie_uuid}/rating/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def rate_movie(
+    movie_uuid: str,
+    data: MovieRatingRequestSchema,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+
+    await MovieService.rate_movie(
+        movie_uuid=movie_uuid,
+        data=data,
+        current_user=current_user,
         db=db,
     )
 
