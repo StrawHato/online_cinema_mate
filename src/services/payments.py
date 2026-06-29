@@ -1,5 +1,5 @@
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from stripe.checkout import Session
@@ -20,6 +20,7 @@ from src.schemas.payments import (
     CheckoutResponseSchema,
     PaymentResponseSchema,
     PaymentItemResponseSchema,
+    PaymentListResponseSchema,
 )
 from src.schemas.orders import OrderMovieResponseSchema
 from src.services.orders import OrderService
@@ -277,4 +278,57 @@ class PaymentService:
 
         return PaymentService._to_payment_response(
             payment,
+        )
+
+    @staticmethod
+    async def get_payments(
+            current_user: UserModel,
+            db: AsyncSession,
+            page: int,
+            page_size: int,
+    ) -> PaymentListResponseSchema:
+
+        count_stmt = (
+            select(func.count(PaymentModel.id))
+            .where(
+                PaymentModel.user_id == current_user.id,
+            )
+        )
+
+        total = await db.scalar(count_stmt) or 0
+
+        stmt = (
+            select(PaymentModel)
+            .options(
+                selectinload(PaymentModel.items)
+                .selectinload(PaymentItemModel.order_item)
+                .selectinload(OrderItemModel.movie)
+            )
+            .where(
+                PaymentModel.user_id == current_user.id,
+            )
+            .order_by(PaymentModel.created_at.desc())
+            .offset((page - 1) * page_size)
+            .limit(page_size)
+        )
+
+        result = await db.execute(stmt)
+
+        payments = result.scalars().all()
+
+        total_pages = (
+            (total + page_size - 1) // page_size
+            if total
+            else 1
+        )
+
+        return PaymentListResponseSchema(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages,
+            items=[
+                PaymentService._to_payment_response(payment)
+                for payment in payments
+            ],
         )
