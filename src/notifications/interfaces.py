@@ -1,4 +1,6 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
+from decimal import Decimal
 
 
 class EmailSenderInterface(ABC):
@@ -28,4 +30,18 @@ class EmailSenderInterface(ABC):
             payment_date: str,
             movies: list[str],
     ) -> None:
+        pass
+
+    @abstractmethod
+    async def send_payment_refunded_email(
+            self,
+            email: str,
+            payment_uuid: str,
+            amount: Decimal,
+            refund_date: datetime,
+            movies: list[str],
+    ) -> None:
+        """
+        Send a payment refunded email asynchronously.
+        """
         pass
