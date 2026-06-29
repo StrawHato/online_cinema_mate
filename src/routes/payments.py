@@ -8,6 +8,7 @@ from fastapi import (
     status,
     Query
 )
+from fastapi.responses import HTMLResponse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -76,6 +77,80 @@ async def stripe_webhook(
 
     return Response(
         status_code=status.HTTP_200_OK,
+    )
+
+
+@router.get(
+    "/success/",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def payment_success() -> HTMLResponse:
+
+    return HTMLResponse(
+        """
+        <html>
+            <head>
+                <title>Payment Successful</title>
+            </head>
+            <body style="
+                font-family: Arial, sans-serif;
+                text-align: center;
+                margin-top: 80px;
+            ">
+                <h1 style="color:#2e7d32;">
+                    ✅ Payment Successful
+                </h1>
+
+                <p>
+                    Your payment has been successfully processed.
+                </p>
+
+                <p>
+                    You may now safely close this page.
+                </p>
+            </body>
+        </html>
+        """
+    )
+
+
+@router.get(
+    "/cancel/",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def payment_cancel() -> HTMLResponse:
+
+    return HTMLResponse(
+        """
+        <html>
+            <head>
+                <title>Payment Cancelled</title>
+            </head>
+            <body style="
+                font-family: Arial, sans-serif;
+                text-align: center;
+                margin-top: 80px;
+            ">
+                <h1 style="color:#d32f2f;">
+                    ❌ Payment Cancelled
+                </h1>
+
+                <p>
+                    Your payment was cancelled.
+                </p>
+
+                <p>
+                    No money has been charged.
+                </p>
+
+                <p>
+                    You may return and try again later.
+                </p>
+            </body>
+        </html>
+        """
     )
 
 
