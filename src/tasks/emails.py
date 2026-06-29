@@ -1,13 +1,13 @@
 import asyncio
 
 import aiosmtplib
-from celery import shared_task
+from src.celery_app import celery_app
 from src.config.dependencies import (
     get_accounts_email_notificator
 )
 
 
-@shared_task(
+@celery_app.task(
     autoretry_for=(
         aiosmtplib.SMTPException,
         ConnectionError,
@@ -30,7 +30,7 @@ def send_activation_email_task(
     )
 
 
-@shared_task(
+@celery_app.task(
     autoretry_for=(
         aiosmtplib.SMTPException,
         ConnectionError,
@@ -52,7 +52,7 @@ def send_activation_complete_email_task(
         )
     )
 
-@shared_task(
+@celery_app.task(
     autoretry_for=(
         aiosmtplib.SMTPException,
         ConnectionError,
@@ -75,7 +75,7 @@ def send_password_reset_email_task(
     )
 
 
-@shared_task(
+@celery_app.task(
     autoretry_for=(
         aiosmtplib.SMTPException,
         ConnectionError,

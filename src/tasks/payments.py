@@ -1,7 +1,7 @@
 import asyncio
 
 import aiosmtplib
-from celery import shared_task
+from src.celery_app import celery_app
 
 from src.config.dependencies import (
     get_accounts_email_notificator,
@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 
-@shared_task(
+@celery_app.task(
     autoretry_for=(
         aiosmtplib.SMTPException,
         ConnectionError,
@@ -75,7 +75,7 @@ async def _send_payment_success_email(
         )
 
 
-@shared_task(
+@celery_app.task(
     autoretry_for=(
         aiosmtplib.SMTPException,
         ConnectionError,
