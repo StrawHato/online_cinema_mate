@@ -122,6 +122,23 @@ class PaymentService:
         )
 
     @staticmethod
+    async def _get_payment_or_none_by_external_id(
+        external_payment_id: str,
+        db: AsyncSession,
+    ) -> PaymentModel | None:
+
+        stmt = (
+            select(PaymentModel)
+            .where(
+                PaymentModel.external_payment_id == external_payment_id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create_checkout_session(
         order_uuid: str,
         current_user: UserModel,
