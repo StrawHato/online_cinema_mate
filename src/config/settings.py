@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME: str = "activation_complete.html"
     PASSWORD_RESET_TEMPLATE_NAME: str = "password_reset_request.html"
     PASSWORD_RESET_COMPLETE_TEMPLATE_NAME: str = "password_reset_complete.html"
+    PAYMENT_SUCCESS_EMAIL_TEMPLATE_NAME: str = "payment_success.html"
+    PAYMENT_REFUNDED_EMAIL_TEMPLATE_NAME: str = "payment_refunded.html"
 
     EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
@@ -37,6 +39,12 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: str
     S3_BUCKET_NAME: str
+
+    STRIPE_SECRET_KEY: str
+    STRIPE_PUBLIC_KEY: str
+    STRIPE_WEBHOOK_SECRET: str
+    STRIPE_SUCCESS_URL: str
+    STRIPE_CANCEL_URL: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

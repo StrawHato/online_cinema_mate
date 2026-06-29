@@ -1,4 +1,6 @@
 import logging
+from datetime import datetime
+from decimal import Decimal
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
@@ -23,6 +25,8 @@ class EmailSender(EmailSenderInterface):
         activation_complete_email_template_name: str,
         password_email_template_name: str,
         password_complete_email_template_name: str,
+        payment_success_email_template_name: str,
+        payment_refunded_email_template_name: str,
     ):
         self._hostname = hostname
         self._port = port
@@ -33,6 +37,8 @@ class EmailSender(EmailSenderInterface):
         self._activation_complete_email_template_name = activation_complete_email_template_name
         self._password_email_template_name = password_email_template_name
         self._password_complete_email_template_name = password_complete_email_template_name
+        self._payment_success_email_template_name = payment_success_email_template_name
+        self._payment_refunded_email_template_name = payment_refunded_email_template_name
 
         self._env = Environment(loader=FileSystemLoader(template_dir))
 
@@ -129,3 +135,74 @@ class EmailSender(EmailSenderInterface):
         html_content = template.render(email=email, login_link=login_link)
         subject = "Your Password Has Been Successfully Reset"
         await self._send_email(email, subject, html_content)
+
+    async def send_payment_success_email(
+            self,
+            email: str,
+            payment_uuid: str,
+            amount: str,
+            payment_date: str,
+            movies: list[str],
+    ) -> None:
+        """
+        Send a payment confirmation email asynchronously.
+
+        Args:
+            email (str): Recipient email.
+            payment_uuid (str): Payment UUID.
+            amount (str): Total payment amount.
+            payment_date (str): Payment date.
+            movies (list[str]): Purchased movies.
+        """
+
+        template = self._env.get_template(
+            self._payment_success_email_template_name,
+        )
+
+        html_content = template.render(
+            email=email,
+            payment_uuid=payment_uuid,
+            amount=amount,
+            payment_date=payment_date,
+            movies=movies,
+        )
+
+        subject = "Payment Successful"
+
+        await self._send_email(
+            email,
+            subject,
+            html_content,
+        )
+
+    async def send_payment_refunded_email(
+            self,
+            email: str,
+            payment_uuid: str,
+            amount: Decimal,
+            refund_date: datetime,
+            movies: list[str],
+    ) -> None:
+        """
+        Send a payment refunded email asynchronously.
+        """
+
+        template = self._env.get_template(
+            self._payment_refunded_email_template_name,
+        )
+
+        html_content = template.render(
+            email=email,
+            payment_uuid=payment_uuid,
+            amount=amount,
+            refund_date=refund_date,
+            movies=movies,
+        )
+
+        subject = "Payment Refunded"
+
+        await self._send_email(
+            email,
+            subject,
+            html_content,
+        )

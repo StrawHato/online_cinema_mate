@@ -6,6 +6,11 @@ from sqlalchemy import select, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from src.database.models.orders import (
+    OrderItemModel,
+    OrderModel,
+    OrderStatusEnum
+)
 from src.database.models.accounts import UserModel
 from src.schemas.movies import (
     MovieResponseSchema,
@@ -499,8 +504,25 @@ class MovieService:
                 detail="Movie not found.",
             )
 
-        # TODO:
-        # Prevent deleting movies that have been purchased.
+        stmt = (
+            select(OrderItemModel.id)
+            .join(OrderModel)
+            .where(
+                OrderItemModel.movie_id == movie.id,
+                OrderModel.status == OrderStatusEnum.PAID,
+            )
+        )
+
+        result = await db.execute(stmt.limit(1))
+
+        if result.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Movie cannot be deleted because it "
+                    "has already been purchased."
+                ),
+            )
 
         await db.delete(movie)
         await db.commit()

@@ -120,7 +120,7 @@ class ShoppingCartService:
             db=db,
         )
 
-        return await ShoppingCartService._to_cart_response(cart)
+        return ShoppingCartService._to_cart_response(cart)
 
     @staticmethod
     async def add_movie_to_cart(

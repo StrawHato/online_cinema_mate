@@ -4,32 +4,28 @@ from enum import Enum
 from uuid import uuid4
 
 from sqlalchemy import (
-    Enum as SQLEnum,
-    ForeignKey,
-    Numeric,
     String,
+    ForeignKey,
     CheckConstraint,
+    Numeric,
+    Enum as SQLEnum,
     DateTime,
-    func,
+    func
 )
-from sqlalchemy.orm import (
-    Mapped,
-    mapped_column,
-    relationship,
-)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.database.models.base import Base
-from src.database.models.payments import PaymentModel, PaymentItemModel
 
 
-class OrderStatusEnum(str, Enum):
+class PaymentStatusEnum(str, Enum):
     PENDING = "pending"
-    PAID = "paid"
+    SUCCESSFUL = "successful"
     CANCELED = "canceled"
+    REFUNDED = "refunded"
 
 
-class OrderModel(Base):
-    __tablename__ = "orders"
+class PaymentModel(Base):
+    __tablename__ = "payments"
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
@@ -52,55 +48,70 @@ class OrderModel(Base):
         index=True,
     )
 
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "orders.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+        index=True,
     )
 
-    status: Mapped[OrderStatusEnum] = mapped_column(
+    status: Mapped[PaymentStatusEnum] = mapped_column(
         SQLEnum(
-            OrderStatusEnum,
-            name="order_status_enum",
+            PaymentStatusEnum,
+            name="payment_status_enum",
         ),
-        default=OrderStatusEnum.PENDING,
+        default=PaymentStatusEnum.PENDING,
         nullable=False,
     )
 
-    total_amount: Mapped[Decimal] = mapped_column(
+    amount: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
         nullable=False,
-        default=0,
+    )
+
+    external_payment_id: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
+        unique=True,
     )
 
     user: Mapped["UserModel"] = relationship(
         "UserModel",
-        back_populates="orders",
+        back_populates="payments",
         lazy="selectin",
     )
 
-    items: Mapped[list["OrderItemModel"]] = relationship(
-        "OrderItemModel",
-        back_populates="order",
+    order: Mapped["OrderModel"] = relationship(
+        "OrderModel",
+        back_populates="payments",
+        lazy="selectin",
+    )
+
+    items: Mapped[list["PaymentItemModel"]] = relationship(
+        "PaymentItemModel",
+        back_populates="payment",
         cascade="all, delete-orphan",
-        lazy="selectin",
-    )
-
-    payments: Mapped[list["PaymentModel"]] = relationship(
-        "PaymentModel",
-        back_populates="order",
         lazy="selectin",
     )
 
     __table_args__ = (
         CheckConstraint(
-            "total_amount >= 0",
+            "amount >= 0",
         ),
     )
 
     def __repr__(self) -> str:
         return (
-            f"<Order("
+            f"<Payment("
             f"id={self.id}, "
             f"uuid='{self.uuid}', "
             f"status='{self.status.value}'"
@@ -108,63 +119,59 @@ class OrderModel(Base):
         )
 
 
-class OrderItemModel(Base):
-    __tablename__ = "order_items"
+class PaymentItemModel(Base):
+    __tablename__ = "payment_items"
 
     id: Mapped[int] = mapped_column(
         primary_key=True,
     )
 
-    order_id: Mapped[int] = mapped_column(
+    payment_id: Mapped[int] = mapped_column(
         ForeignKey(
-            "orders.id",
+            "payments.id",
             ondelete="CASCADE",
         ),
         nullable=False,
+        index=True,
     )
 
-    movie_id: Mapped[int] = mapped_column(
+    order_item_id: Mapped[int] = mapped_column(
         ForeignKey(
-            "movies.id",
-            ondelete="RESTRICT",
+            "order_items.id",
+            ondelete="CASCADE",
         ),
         nullable=False,
+        index=True,
     )
 
-    price_at_order: Mapped[Decimal] = mapped_column(
+    price_at_payment: Mapped[Decimal] = mapped_column(
         Numeric(10, 2),
         nullable=False,
     )
 
-    order: Mapped["OrderModel"] = relationship(
-        "OrderModel",
+    payment: Mapped["PaymentModel"] = relationship(
+        "PaymentModel",
         back_populates="items",
         lazy="selectin",
     )
 
-    movie: Mapped["MovieModel"] = relationship(
-        "MovieModel",
-        back_populates="order_items",
-        lazy="selectin",
-    )
-
-    payment_items: Mapped[list["PaymentItemModel"]] = relationship(
-        "PaymentItemModel",
-        back_populates="order_item",
+    order_item: Mapped["OrderItemModel"] = relationship(
+        "OrderItemModel",
+        back_populates="payment_items",
         lazy="selectin",
     )
 
     __table_args__ = (
         CheckConstraint(
-            "price_at_order >= 0",
+            "price_at_payment >= 0",
         ),
     )
 
     def __repr__(self) -> str:
         return (
-            f"<OrderItem("
+            f"<PaymentItem("
             f"id={self.id}, "
-            f"order_id={self.order_id}, "
-            f"movie_id={self.movie_id}"
+            f"payment_id={self.payment_id}, "
+            f"order_item_id={self.order_item_id}"
             f")>"
         )

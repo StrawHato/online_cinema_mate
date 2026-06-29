@@ -9,6 +9,7 @@ from src.security.interfaces import JWTAuthManagerInterface
 from src.security.token_manager import JWTAuthManager
 from src.storages.interfaces import StorageInterface
 from src.storages.s3 import S3Storage
+from src.payments.stripe import StripeService
 
 
 @lru_cache
@@ -37,6 +38,8 @@ def get_accounts_email_notificator() -> EmailSenderInterface:
         activation_complete_email_template_name=settings.ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME,
         password_email_template_name=settings.PASSWORD_RESET_TEMPLATE_NAME,
         password_complete_email_template_name=settings.PASSWORD_RESET_COMPLETE_TEMPLATE_NAME,
+        payment_success_email_template_name=settings.PAYMENT_SUCCESS_EMAIL_TEMPLATE_NAME,
+        payment_refunded_email_template_name=settings.PAYMENT_REFUNDED_EMAIL_TEMPLATE_NAME,
     )
 
 
@@ -48,4 +51,16 @@ def get_storage(
         access_key=settings.S3_ACCESS_KEY,
         secret_key=settings.S3_SECRET_KEY,
         bucket_name=settings.S3_BUCKET_NAME,
+    )
+
+
+@lru_cache
+def get_stripe_service() -> StripeService:
+    settings = get_settings()
+
+    return StripeService(
+        secret_key=settings.STRIPE_SECRET_KEY,
+        webhook_secret=settings.STRIPE_WEBHOOK_SECRET,
+        success_url=settings.STRIPE_SUCCESS_URL,
+        cancel_url=settings.STRIPE_CANCEL_URL,
     )

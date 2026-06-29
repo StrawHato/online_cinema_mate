@@ -1,0 +1,276 @@
+from datetime import datetime
+
+from fastapi import (
+    APIRouter,
+    Depends,
+    Request,
+    Response,
+    status,
+    Query
+)
+from fastapi.responses import HTMLResponse
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.database.models.payments import PaymentStatusEnum
+from src.database.models.accounts import UserModel
+from src.database.session import get_db
+from src.security.http import get_current_user, get_current_admin
+from src.config.dependencies import get_stripe_service
+from src.payments.stripe import StripeService
+from src.schemas.payments import (
+    CheckoutResponseSchema,
+    PaymentResponseSchema,
+    PaymentListResponseSchema
+)
+from src.services.payments import PaymentService
+
+router = APIRouter(
+    prefix="/payments",
+    tags=["Payments"],
+)
+
+
+@router.post(
+    "/{order_uuid}/checkout/",
+    response_model=CheckoutResponseSchema,
+)
+async def create_checkout_session(
+    order_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    stripe_service: StripeService = Depends(get_stripe_service),
+) -> CheckoutResponseSchema:
+
+    return await PaymentService.create_checkout_session(
+        order_uuid=order_uuid,
+        current_user=current_user,
+        db=db,
+        stripe_service=stripe_service,
+    )
+
+
+@router.post(
+    "/webhook/",
+    status_code=status.HTTP_200_OK,
+)
+async def stripe_webhook(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    stripe_service: StripeService = Depends(get_stripe_service),
+) -> Response:
+
+    payload = await request.body()
+
+    signature = request.headers.get(
+        "Stripe-Signature",
+        "",
+    )
+
+    await PaymentService.process_webhook(
+        payload=payload,
+        signature=signature,
+        stripe_service=stripe_service,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_200_OK,
+    )
+
+
+@router.get(
+    "/success/",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def payment_success() -> HTMLResponse:
+
+    return HTMLResponse(
+        """
+        <html>
+            <head>
+                <title>Payment Successful</title>
+            </head>
+            <body style="
+                font-family: Arial, sans-serif;
+                text-align: center;
+                margin-top: 80px;
+            ">
+                <h1 style="color:#2e7d32;">
+                    ✅ Payment Successful
+                </h1>
+
+                <p>
+                    Your payment has been successfully processed.
+                </p>
+
+                <p>
+                    You may now safely close this page.
+                </p>
+            </body>
+        </html>
+        """
+    )
+
+
+@router.get(
+    "/cancel/",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def payment_cancel(
+    payment_uuid: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+
+    if payment_uuid is not None:
+        await PaymentService.cancel_payment(
+            payment_uuid=payment_uuid,
+            db=db,
+        )
+
+    return HTMLResponse(
+        """
+        <html>
+            <head>
+                <title>Payment Cancelled</title>
+            </head>
+            <body style="
+                font-family: Arial, sans-serif;
+                text-align: center;
+                margin-top: 80px;
+            ">
+                <h1 style="color:#d32f2f;">
+                    ❌ Payment Cancelled
+                </h1>
+
+                <p>
+                    Your payment was cancelled.
+                </p>
+
+                <p>
+                    No money has been charged.
+                </p>
+
+                <p>
+                    Please try again or use a different payment method if the problem persists.
+                </p>
+
+                <p>
+                    You may now safely close this page.
+                </p>
+            </body>
+        </html>
+        """
+    )
+
+
+@router.get(
+    "/{payment_uuid}/",
+    response_model=PaymentResponseSchema,
+)
+async def get_payment(
+    payment_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaymentResponseSchema:
+
+    return await PaymentService.get_payment(
+        payment_uuid=payment_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.get(
+    "/",
+    response_model=PaymentListResponseSchema,
+)
+async def get_payments(
+    page: int = Query(
+        1,
+        ge=1,
+    ),
+    page_size: int = Query(
+        10,
+        ge=1,
+        le=20,
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaymentListResponseSchema:
+
+    return await PaymentService.get_payments(
+        current_user=current_user,
+        db=db,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/admin/all/",
+    response_model=PaymentListResponseSchema,
+)
+async def get_all_payments(
+    page: int = Query(
+        1,
+        ge=1,
+    ),
+    page_size: int = Query(
+        10,
+        ge=1,
+        le=20,
+    ),
+    user_id: int | None = Query(
+        None,
+        ge=1,
+    ),
+    status: PaymentStatusEnum | None = Query(
+        None,
+    ),
+    created_from: datetime | None = Query(
+        None,
+    ),
+    created_to: datetime | None = Query(
+        None,
+    ),
+    current_user: UserModel = Depends(get_current_admin),
+    db: AsyncSession = Depends(get_db),
+) -> PaymentListResponseSchema:
+
+    return await PaymentService.get_all_payments(
+        db=db,
+        page=page,
+        page_size=page_size,
+        user_id=user_id,
+        status=status,
+        created_from=created_from,
+        created_to=created_to,
+    )
+
+
+@router.post(
+    "/{payment_uuid}/refund/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def refund_payment(
+    payment_uuid: str,
+    current_user: UserModel = Depends(
+        get_current_user,
+    ),
+    db: AsyncSession = Depends(
+        get_db,
+    ),
+    stripe_service: StripeService = Depends(
+        get_stripe_service,
+    ),
+) -> None:
+
+    await PaymentService.refund_payment(
+        payment_uuid=payment_uuid,
+        current_user=current_user,
+        db=db,
+        stripe_service=stripe_service,
+    )
