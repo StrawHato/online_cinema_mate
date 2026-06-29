@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -64,3 +65,12 @@ class MovieRatingRequestSchema(BaseModel):
         ge=1,
         le=10,
     )
+
+
+class MovieRatingResponseSchema(BaseModel):
+    rating: int
+    created_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
