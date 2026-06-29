@@ -83,3 +83,7 @@ class MovieRatingSummarySchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class MovieUserRatingSchema(BaseModel):
+    rating: int | None
