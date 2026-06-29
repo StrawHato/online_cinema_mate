@@ -37,6 +37,9 @@ class MovieResponseSchema(MovieBaseSchema):
     id: int
     uuid: str
 
+    average_rating: Decimal
+    ratings_count: int
+
     certification: CDSGSchema
     genres: list[CDSGSchema]
     stars: list[CDSGSchema]
