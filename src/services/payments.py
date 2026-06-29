@@ -1,11 +1,15 @@
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from src.database.models.payments import PaymentModel, PaymentItemModel
 from src.payments.stripe import StripeService
 from src.database.models.accounts import UserModel
 from src.database.models.orders import (
     OrderModel,
     OrderStatusEnum,
+    OrderItemModel,
 )
 from src.schemas.payments import (
     CheckoutResponseSchema,
@@ -42,6 +46,38 @@ class PaymentService:
             )
 
     @staticmethod
+    async def _get_payment_or_404(
+            payment_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> PaymentModel:
+
+        stmt = (
+            select(PaymentModel)
+            .options(
+                selectinload(PaymentModel.items)
+                .selectinload(PaymentItemModel.order_item)
+                .selectinload(OrderItemModel.movie)
+            )
+            .where(
+                PaymentModel.uuid == payment_uuid,
+                PaymentModel.user_id == current_user.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        payment = result.scalar_one_or_none()
+
+        if payment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Payment not found.",
+            )
+
+        return payment
+
+    @staticmethod
     async def create_checkout_session(
         order_uuid: str,
         current_user: UserModel,
@@ -59,7 +95,7 @@ class PaymentService:
             order,
         )
 
-        checkout_url = await stripe_service.create_checkout_session(
+        checkout_url = stripe_service.create_checkout_session(
             order=order,
             current_user=current_user,
         )
