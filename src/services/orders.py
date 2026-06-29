@@ -135,8 +135,25 @@ class OrderService:
                 ),
             )
 
-        # TODO:
-        # Check already purchased movies.
+        stmt = (
+            select(OrderItemModel.movie_id)
+            .join(OrderModel)
+            .where(
+                OrderModel.user_id == current_user.id,
+                OrderModel.status == OrderStatusEnum.PAID,
+                OrderItemModel.movie_id.in_(movie_ids),
+            )
+        )
+
+        result = await db.execute(stmt.limit(1))
+
+        if result.scalar_one_or_none() is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=(
+                    "Some movies have already been purchased."
+                ),
+            )
 
         order = OrderModel(
             user_id=current_user.id,
