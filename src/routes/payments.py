@@ -162,3 +162,28 @@ async def get_all_payments(
         created_from=created_from,
         created_to=created_to,
     )
+
+
+@router.post(
+    "/{payment_uuid}/refund/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def refund_payment(
+    payment_uuid: str,
+    current_user: UserModel = Depends(
+        get_current_user,
+    ),
+    db: AsyncSession = Depends(
+        get_db,
+    ),
+    stripe_service: StripeService = Depends(
+        get_stripe_service,
+    ),
+) -> None:
+
+    await PaymentService.refund_payment(
+        payment_uuid=payment_uuid,
+        current_user=current_user,
+        db=db,
+        stripe_service=stripe_service,
+    )
