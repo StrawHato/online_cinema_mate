@@ -25,7 +25,6 @@ from src.schemas.payments import (
 )
 from src.services.payments import PaymentService
 
-
 router = APIRouter(
     prefix="/payments",
     tags=["Payments"],
@@ -120,7 +119,16 @@ async def payment_success() -> HTMLResponse:
     response_class=HTMLResponse,
     include_in_schema=False,
 )
-async def payment_cancel() -> HTMLResponse:
+async def payment_cancel(
+    payment_uuid: str | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> HTMLResponse:
+
+    if payment_uuid is not None:
+        await PaymentService.cancel_payment(
+            payment_uuid=payment_uuid,
+            db=db,
+        )
 
     return HTMLResponse(
         """
@@ -146,7 +154,11 @@ async def payment_cancel() -> HTMLResponse:
                 </p>
 
                 <p>
-                    You may return and try again later.
+                    Please try again or use a different payment method if the problem persists.
+                </p>
+
+                <p>
+                    You may now safely close this page.
                 </p>
             </body>
         </html>

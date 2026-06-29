@@ -8,7 +8,7 @@ from stripe import (
 
 from fastapi import HTTPException, status
 
-from database.models import PaymentModel
+from src.database.models import PaymentModel
 from src.database.models.accounts import UserModel
 from src.database.models.orders import OrderModel
 
@@ -63,7 +63,10 @@ class StripeService:
                     }
                 },
                 success_url=self.success_url,
-                cancel_url=self.cancel_url,
+                cancel_url=(
+                    f"{self.cancel_url}"
+                    f"?payment_uuid={payment.uuid}"
+                ),
             )
 
             if session.url is None:

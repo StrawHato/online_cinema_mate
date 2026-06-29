@@ -532,7 +532,7 @@ class PaymentService:
 
         payment.status = PaymentStatusEnum.CANCELED
 
-        if payment.order is not None:
-            payment.order.status = OrderStatusEnum.CANCELED
+        print("cancel_payment called")
+        print(payment.order.status)
 
         await db.commit()
