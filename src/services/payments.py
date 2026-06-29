@@ -13,7 +13,10 @@ from src.database.models.orders import (
 )
 from src.schemas.payments import (
     CheckoutResponseSchema,
+    PaymentResponseSchema,
+    PaymentItemResponseSchema,
 )
+from src.schemas.orders import OrderMovieResponseSchema
 from src.services.orders import OrderService
 
 
@@ -93,6 +96,30 @@ class PaymentService:
         result = await db.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    def _to_payment_response(
+        payment: PaymentModel,
+    ) -> PaymentResponseSchema:
+
+        return PaymentResponseSchema(
+            uuid=payment.uuid,
+            created_at=payment.created_at,
+            status=payment.status,
+            amount=payment.amount,
+            items=[
+                PaymentItemResponseSchema(
+                    id=item.id,
+                    price_at_payment=item.price_at_payment,
+                    movie=OrderMovieResponseSchema(
+                        uuid=item.order_item.movie.uuid,
+                        name=item.order_item.movie.name,
+                        year=item.order_item.movie.year,
+                    ),
+                )
+                for item in payment.items
+            ],
+        )
 
     @staticmethod
     async def create_checkout_session(
