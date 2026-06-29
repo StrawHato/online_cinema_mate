@@ -74,3 +74,12 @@ class MovieRatingResponseSchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class MovieRatingSummarySchema(BaseModel):
+    average_rating: Decimal
+    ratings_count: int
+
+    model_config = {
+        "from_attributes": True,
+    }
