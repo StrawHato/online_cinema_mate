@@ -3,7 +3,8 @@ from fastapi import (
     Depends,
     Request,
     Response,
-    status
+    status,
+    Query
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,11 @@ from src.database.session import get_db
 from src.security.http import get_current_user
 from src.config.dependencies import get_stripe_service
 from src.payments.stripe import StripeService
-from src.schemas.payments import CheckoutResponseSchema, PaymentResponseSchema
+from src.schemas.payments import (
+    CheckoutResponseSchema,
+    PaymentResponseSchema,
+    PaymentListResponseSchema
+)
 from src.services.payments import PaymentService
 
 
@@ -85,4 +90,30 @@ async def get_payment(
         payment_uuid=payment_uuid,
         current_user=current_user,
         db=db,
+    )
+
+
+@router.get(
+    "/",
+    response_model=PaymentListResponseSchema,
+)
+async def get_payments(
+    page: int = Query(
+        1,
+        ge=1,
+    ),
+    page_size: int = Query(
+        10,
+        ge=1,
+        le=20,
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> PaymentListResponseSchema:
+
+    return await PaymentService.get_payments(
+        current_user=current_user,
+        db=db,
+        page=page,
+        page_size=page_size,
     )
