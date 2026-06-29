@@ -8,6 +8,7 @@ from stripe import (
 
 from fastapi import HTTPException, status
 
+from database.models import PaymentModel
 from src.database.models.accounts import UserModel
 from src.database.models.orders import OrderModel
 
@@ -29,6 +30,7 @@ class StripeService:
     def create_checkout_session(
         self,
         order: OrderModel,
+        payment: PaymentModel,
         current_user: UserModel,
     ) -> str:
 
@@ -51,7 +53,7 @@ class StripeService:
                     for item in order.items
                 ],
                 metadata={
-                    "order_uuid": order.uuid,
+                    "payment_uuid": payment.uuid,
                     "user_id": str(current_user.id),
                 },
                 payment_intent_data={

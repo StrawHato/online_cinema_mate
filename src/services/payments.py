@@ -169,8 +169,47 @@ class PaymentService:
             order,
         )
 
+        existing_payment = await PaymentService._get_payment_by_order(
+            order_id=order.id,
+            db=db,
+        )
+
+        if existing_payment is not None:
+
+            if existing_payment.status == PaymentStatusEnum.SUCCESSFUL:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Payment has already been completed.",
+                )
+
+            if existing_payment.status == PaymentStatusEnum.REFUNDED:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Refunded payments cannot be reused.",
+                )
+
+            payment = existing_payment
+
+            payment.status = PaymentStatusEnum.PENDING
+            payment.external_payment_id = None
+
+        else:
+            payment = PaymentModel(
+                user_id=current_user.id,
+                order_id=order.id,
+                amount=order.total_amount,
+                status=PaymentStatusEnum.PENDING,
+            )
+
+            db.add(payment)
+
+        await db.flush()
+        await db.commit()
+        await db.refresh(payment)
+
         checkout_url = stripe_service.create_checkout_session(
             order=order,
+            payment=payment,
             current_user=current_user,
         )
 
@@ -202,27 +241,38 @@ class PaymentService:
             return
 
         try:
-            order_uuid = metadata["order_uuid"]
+            payment_uuid = metadata["payment_uuid"]
         except KeyError:
             return
 
-        if order_uuid is None:
+        if payment_uuid is None:
             return
 
         stmt = (
-            select(OrderModel)
+            select(PaymentModel)
             .options(
-                selectinload(OrderModel.items)
-                .selectinload(OrderItemModel.movie)
+                selectinload(PaymentModel.order)
+                .selectinload(OrderModel.items)
+                .selectinload(OrderItemModel.movie),
+
+                selectinload(PaymentModel.items),
             )
             .where(
-                OrderModel.uuid == order_uuid,
+                PaymentModel.uuid == payment_uuid,
             )
         )
 
         result = await db.execute(stmt)
 
-        order = result.scalar_one_or_none()
+        payment = result.scalar_one_or_none()
+
+        if payment is None:
+            return
+
+        order = payment.order
+
+        if payment.status == PaymentStatusEnum.SUCCESSFUL:
+            return
 
         if order is None:
             return
@@ -230,27 +280,8 @@ class PaymentService:
         if order.status == OrderStatusEnum.PAID:
             return
 
-        existing_payment = (
-            await PaymentService._get_payment_by_order(
-                order_id=order.id,
-                db=db,
-            )
-        )
-
-        if existing_payment is not None:
-            return
-
-        payment = PaymentModel(
-            user_id=order.user_id,
-            order_id=order.id,
-            amount=order.total_amount,
-            status=PaymentStatusEnum.SUCCESSFUL,
-            external_payment_id=session.payment_intent,
-        )
-
-        db.add(payment)
-
-        await db.flush()
+        payment.status = PaymentStatusEnum.SUCCESSFUL
+        payment.external_payment_id = session.payment_intent
 
         for order_item in order.items:
             payment_item = PaymentItemModel(
