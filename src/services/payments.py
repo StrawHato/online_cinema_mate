@@ -261,3 +261,20 @@ class PaymentService:
         send_payment_success_email.delay(
             payment.id,
         )
+
+    @staticmethod
+    async def get_payment(
+            payment_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> PaymentResponseSchema:
+
+        payment = await PaymentService._get_payment_or_404(
+            payment_uuid=payment_uuid,
+            current_user=current_user,
+            db=db,
+        )
+
+        return PaymentService._to_payment_response(
+            payment,
+        )
