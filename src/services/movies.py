@@ -694,3 +694,44 @@ class MovieService:
         result = await db.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def delete_rating(
+            movie_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        stmt = (
+            select(MovieRatingModel)
+            .where(
+                MovieRatingModel.movie_id == movie.id,
+                MovieRatingModel.user_id == current_user.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        movie_rating = result.scalar_one_or_none()
+
+        if movie_rating is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Rating not found.",
+            )
+
+        await db.delete(movie_rating)
+
+        await db.flush()
+
+        await MovieService._recalculate_rating(
+            movie,
+            db,
+        )
+
+        await db.commit()
