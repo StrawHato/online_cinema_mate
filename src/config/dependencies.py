@@ -38,6 +38,7 @@ def get_accounts_email_notificator() -> EmailSenderInterface:
         activation_complete_email_template_name=settings.ACTIVATION_COMPLETE_EMAIL_TEMPLATE_NAME,
         password_email_template_name=settings.PASSWORD_RESET_TEMPLATE_NAME,
         password_complete_email_template_name=settings.PASSWORD_RESET_COMPLETE_TEMPLATE_NAME,
+        payment_success_email_template_name=settings.PAYMENT_SUCCESS_EMAIL_TEMPLATE_NAME,
     )
 
 

@@ -34,7 +34,7 @@ class EmailSender(EmailSenderInterface):
         self._activation_complete_email_template_name = activation_complete_email_template_name
         self._password_email_template_name = password_email_template_name
         self._password_complete_email_template_name = password_complete_email_template_name
-        self._payment_success_email_template_name = (payment_success_email_template_name)
+        self._payment_success_email_template_name = payment_success_email_template_name
 
         self._env = Environment(loader=FileSystemLoader(template_dir))
 
