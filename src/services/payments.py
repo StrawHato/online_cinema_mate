@@ -78,6 +78,23 @@ class PaymentService:
         return payment
 
     @staticmethod
+    async def _get_payment_by_order(
+        order_id: int,
+        db: AsyncSession,
+    ) -> PaymentModel | None:
+
+        stmt = (
+            select(PaymentModel)
+            .where(
+                PaymentModel.order_id == order_id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
     async def create_checkout_session(
         order_uuid: str,
         current_user: UserModel,
