@@ -624,3 +624,49 @@ class MovieService:
         await db.delete(favorite)
 
         await db.commit()
+
+    @staticmethod
+    async def rate_movie(
+            movie_uuid: str,
+            data: MovieRatingRequestSchema,
+            current_user: UserModel,
+            db: AsyncSession,
+    ):
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        stmt = (
+            select(MovieRatingModel)
+            .where(
+                MovieRatingModel.user_id == current_user.id,
+                MovieRatingModel.movie_id == movie.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        movie_rating = result.scalar_one_or_none()
+
+        if movie_rating is None:
+            movie_rating = MovieRatingModel(
+                user_id=current_user.id,
+                movie_id=movie.id,
+                rating=data.rating,
+            )
+
+            db.add(movie_rating)
+
+        else:
+            movie_rating.rating = data.rating
+
+        await db.flush()
+
+        await MovieService._recalculate_rating(
+            movie,
+            db,
+        )
+
+        await db.commit()
