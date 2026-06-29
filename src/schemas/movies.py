@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CDSGSchema(BaseModel):
@@ -57,3 +57,10 @@ class MovieListResponseSchema(BaseModel):
 
 class MovieUpdateRequestSchema(MovieCreateRequestSchema):
     pass
+
+
+class MovieRatingRequestSchema(BaseModel):
+    rating: int = Field(
+        ge=1,
+        le=10,
+    )
