@@ -869,3 +869,27 @@ class MovieService:
         return MovieCommentResponseSchema.model_validate(
             comment,
         )
+
+    @staticmethod
+    async def delete_comment(
+            comment_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_uuid=comment_uuid,
+        )
+
+        if comment.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can delete only your own comments.",
+            )
+
+        if comment.parent is not None:
+            comment.parent.replies_count -= 1
+
+        await db.delete(comment)
+
+        await db.commit()
