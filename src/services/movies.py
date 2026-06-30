@@ -1096,3 +1096,19 @@ class MovieService:
         comment.likes_count += 1
 
         await db.commit()
+
+    @staticmethod
+    async def _unlike_comment(
+            comment: MovieCommentModel,
+            like: MovieCommentLikeModel,
+            db: AsyncSession,
+    ) -> None:
+
+        await db.delete(like)
+
+        comment.likes_count = max(
+            comment.likes_count,
+            0,
+        )
+
+        await db.commit()
