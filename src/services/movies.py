@@ -16,7 +16,10 @@ from src.schemas.movies import (
     MovieResponseSchema,
     MovieCreateRequestSchema,
     MovieListResponseSchema,
-    MovieUpdateRequestSchema, MovieRatingRequestSchema,
+    MovieUpdateRequestSchema,
+    MovieRatingRequestSchema,
+    MovieCommentResponseSchema,
+    MovieCommentCreateRequestSchema,
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -786,3 +789,54 @@ class MovieService:
         )
 
         await db.commit()
+
+    @staticmethod
+    async def create_comment(
+            movie_uuid: str,
+            data: MovieCommentCreateRequestSchema,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieCommentResponseSchema:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        parent_comment = None
+
+        if data.parent_comment_uuid is not None:
+            parent_comment = await MovieService._get_comment_or_404(
+                db=db,
+                comment_uuid=data.parent_comment_uuid,
+            )
+
+            if parent_comment.movie_id != movie.id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Parent comment belongs to another movie.",
+                )
+
+        comment = MovieCommentModel(
+            user_id=current_user.id,
+            movie_id=movie.id,
+            parent_comment_id=(
+                parent_comment.id
+                if parent_comment is not None
+                else None
+            ),
+            text=data.text,
+        )
+
+        db.add(comment)
+
+        if parent_comment is not None:
+            parent_comment.replies_count += 1
+
+        await db.commit()
+
+        await db.refresh(comment)
+
+        return MovieCommentResponseSchema.model_validate(
+            comment,
+        )
