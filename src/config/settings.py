@@ -20,8 +20,8 @@ class Settings(BaseSettings):
     PASSWORD_RESET_COMPLETE_TEMPLATE_NAME: str = "password_reset_complete.html"
     PAYMENT_SUCCESS_EMAIL_TEMPLATE_NAME: str = "payment_success.html"
     PAYMENT_REFUNDED_EMAIL_TEMPLATE_NAME: str = "payment_refunded.html"
-    COMMENT_REPLY_EMAIL_TEMPLATE_NAME = "comment_reply_email.html"
-    COMMENT_LIKE_EMAIL_TEMPLATE_NAME = "comment_like_email.html"
+    COMMENT_REPLY_EMAIL_TEMPLATE_NAME: str = "comment_reply_email.html"
+    COMMENT_LIKE_EMAIL_TEMPLATE_NAME: str = "comment_like_email.html"
 
     EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
     EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
