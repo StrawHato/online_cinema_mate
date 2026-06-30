@@ -98,3 +98,10 @@ class MovieCommentAuthorSchema(BaseModel):
     model_config = {
         "from_attributes": True,
     }
+
+
+class MovieCommentBaseSchema(BaseModel):
+    text: str = Field(
+        min_length=1,
+        max_length=5000,
+    )
