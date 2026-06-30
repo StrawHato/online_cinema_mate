@@ -21,6 +21,7 @@ from src.schemas.movies import (
     MovieCommentResponseSchema,
     MovieCommentCreateRequestSchema,
     MovieCommentUpdateRequestSchema,
+    MovieCommentTreeResponseSchema,
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -285,6 +286,54 @@ class MovieService:
             )
 
         return comment
+
+    @staticmethod
+    def _build_comment_tree(
+            comments: list[MovieCommentModel],
+            current_user: UserModel,
+    ) -> list[MovieCommentTreeResponseSchema]:
+
+        comment_map: dict[
+            int,
+            MovieCommentTreeResponseSchema,
+        ] = {}
+
+        roots: list[
+            MovieCommentTreeResponseSchema
+        ] = []
+
+        for comment in comments:
+            comment.author = comment.user
+
+            schema = MovieCommentTreeResponseSchema.model_validate(
+                comment,
+            )
+
+            schema.is_liked = any(
+                like.user_id == current_user.id
+                for like in comment.likes
+            )
+
+            schema.replies = []
+
+            comment_map[comment.id] = schema
+
+        for comment in comments:
+
+            schema = comment_map[comment.id]
+
+            if comment.parent_comment_id is None:
+                roots.append(schema)
+
+            else:
+                parent = comment_map.get(
+                    comment.parent_comment_id,
+                )
+
+                if parent is not None:
+                    parent.replies.append(schema)
+
+        return roots
 
     @staticmethod
     async def create_movie(
