@@ -289,3 +289,24 @@ async def delete_comment(
     return Response(
         status_code=status.HTTP_204_NO_CONTENT,
     )
+
+
+@router.post(
+    "/comments/{comment_uuid}/like/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def toggle_comment_like(
+    comment_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+
+    await MovieService.toggle_comment_like(
+        comment_uuid=comment_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
