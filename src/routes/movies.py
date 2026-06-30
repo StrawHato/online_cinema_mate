@@ -18,6 +18,8 @@ from src.schemas.movies import (
     MovieUpdateRequestSchema,
     MovieRatingRequestSchema,
     MovieRatingResponseSchema,
+    MovieCommentResponseSchema,
+    MovieCommentCreateRequestSchema,
 )
 from src.security.http import get_current_admin, get_current_user
 from src.database.models.accounts import UserModel
@@ -203,4 +205,24 @@ async def delete_movie(
 
     return Response(
         status_code=status.HTTP_204_NO_CONTENT,
+    )
+
+
+@router.post(
+    "/{movie_uuid}/comments/",
+    response_model=MovieCommentResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_comment(
+    movie_uuid: str,
+    data: MovieCommentCreateRequestSchema,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MovieCommentResponseSchema:
+
+    return await MovieService.create_comment(
+        movie_uuid=movie_uuid,
+        data=data,
+        current_user=current_user,
+        db=db,
     )
