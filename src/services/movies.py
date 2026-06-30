@@ -1078,3 +1078,21 @@ class MovieService:
             else 1,
             items=tree,
         )
+
+    @staticmethod
+    async def _like_comment(
+            comment: MovieCommentModel,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        like = MovieCommentLikeModel(
+            comment_id=comment.id,
+            user_id=current_user.id,
+        )
+
+        db.add(like)
+
+        comment.likes_count += 1
+
+        await db.commit()
