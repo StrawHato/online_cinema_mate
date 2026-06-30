@@ -45,3 +45,31 @@ class EmailSenderInterface(ABC):
         Send a payment refunded email asynchronously.
         """
         pass
+
+    @abstractmethod
+    async def send_comment_reply_email(
+        self,
+        email: str,
+        username: str,
+        movie_name: str,
+        comment_text: str,
+        reply_text: str,
+    ) -> None:
+        """
+        Notify a user that someone replied to their comment.
+        """
+        pass
+
+    @abstractmethod
+    async def send_comment_like_email(
+        self,
+        email: str,
+        username: str,
+        movie_name: str,
+        comment_text: str,
+        liked_by: str,
+    ) -> None:
+        """
+        Notify a user that someone liked their comment.
+        """
+        pass

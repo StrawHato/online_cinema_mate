@@ -12,6 +12,7 @@ from src.validation.profile import (
 
 
 class BaseProfileSchema(BaseModel):
+    username: str | None = None
     first_name: str | None = None
     last_name: str | None = None
     gender: GenderEnum | None = None
@@ -19,6 +20,19 @@ class BaseProfileSchema(BaseModel):
     info: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(
+            cls,
+            value: str | None,
+    ) -> str | None:
+        if value is None:
+            return value
+
+        validate_name(value)
+
+        return value.strip()
 
     @field_validator("first_name", "last_name")
     @classmethod
@@ -57,6 +71,7 @@ class ProfileCreateRequestSchema(BaseProfileSchema):
     @classmethod
     def from_form(
         cls,
+        username: str | None = Form(None),
         first_name: str | None = Form(None),
         last_name: str | None = Form(None),
         gender: GenderEnum | None = Form(None),
@@ -65,6 +80,7 @@ class ProfileCreateRequestSchema(BaseProfileSchema):
         avatar: UploadFile | None = File(None),
     ) -> "ProfileCreateRequestSchema":
         return cls(
+            username=username,
             first_name=first_name,
             last_name=last_name,
             gender=gender,
@@ -91,6 +107,7 @@ class ProfileResponseSchema(BaseModel):
     id: int
     user_id: int
 
+    username: str | None = None
     first_name: str | None
     last_name: str | None
     gender: GenderEnum | None

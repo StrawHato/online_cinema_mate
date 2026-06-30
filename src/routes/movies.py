@@ -5,7 +5,7 @@ from fastapi import (
     Depends,
     status,
     Query,
-    Response
+    Response, HTTPException
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,8 +16,14 @@ from src.schemas.movies import (
     MovieResponseSchema,
     MovieListResponseSchema,
     MovieUpdateRequestSchema,
+    MovieRatingRequestSchema,
+    MovieRatingResponseSchema,
+    MovieCommentResponseSchema,
+    MovieCommentCreateRequestSchema,
+    MovieCommentListResponseSchema,
+    MovieCommentUpdateRequestSchema,
 )
-from src.security.http import get_current_admin
+from src.security.http import get_current_admin, get_current_user
 from src.database.models.accounts import UserModel
 from src.services.movies import MovieService
 
@@ -121,6 +127,69 @@ async def update_movie(
     )
 
 
+@router.post(
+    "/{movie_uuid}/rating/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def rate_movie(
+    movie_uuid: str,
+    data: MovieRatingRequestSchema,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+
+    await MovieService.rate_movie(
+        movie_uuid=movie_uuid,
+        data=data,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.get(
+    "/{movie_uuid}/rating/",
+    response_model=MovieRatingResponseSchema,
+)
+async def get_user_rating(
+    movie_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MovieRatingResponseSchema:
+
+    rating = await MovieService.get_user_rating(
+        movie_uuid=movie_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    if rating is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rating not found.",
+        )
+
+    return MovieRatingResponseSchema.model_validate(
+        rating,
+    )
+
+
+@router.delete(
+    "/{movie_uuid}/rating/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_rating(
+    movie_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+
+    await MovieService.delete_rating(
+        movie_uuid=movie_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+
 @router.delete(
     "/{movie_id}/",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -133,6 +202,108 @@ async def delete_movie(
 
     await MovieService.delete_movie(
         movie_id=movie_id,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+
+
+@router.post(
+    "/{movie_uuid}/comments/",
+    response_model=MovieCommentResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_comment(
+    movie_uuid: str,
+    data: MovieCommentCreateRequestSchema,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MovieCommentResponseSchema:
+
+    return await MovieService.create_comment(
+        movie_uuid=movie_uuid,
+        data=data,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.get(
+    "/{movie_uuid}/comments/",
+    response_model=MovieCommentListResponseSchema,
+)
+async def get_movie_comments(
+    movie_uuid: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MovieCommentListResponseSchema:
+
+    return await MovieService.get_movie_comments(
+        movie_uuid=movie_uuid,
+        page=page,
+        page_size=page_size,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.patch(
+    "/comments/{comment_uuid}/",
+    response_model=MovieCommentResponseSchema,
+)
+async def update_comment(
+    comment_uuid: str,
+    data: MovieCommentUpdateRequestSchema,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MovieCommentResponseSchema:
+
+    return await MovieService.update_comment(
+        comment_uuid=comment_uuid,
+        data=data,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.delete(
+    "/comments/{comment_uuid}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_comment(
+    comment_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+
+    await MovieService.delete_comment(
+        comment_uuid=comment_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
+
+
+@router.post(
+    "/comments/{comment_uuid}/like/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def toggle_comment_like(
+    comment_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+
+    await MovieService.toggle_comment_like(
+        comment_uuid=comment_uuid,
+        current_user=current_user,
         db=db,
     )
 

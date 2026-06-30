@@ -117,6 +117,21 @@ class UserModel(Base):
         lazy="selectin",
     )
 
+    movie_ratings: Mapped[list["MovieRatingModel"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    comments: Mapped[list["MovieCommentModel"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    comment_likes: Mapped[list["MovieCommentLikeModel"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
     def __repr__(self):
         return f"<UserModel(id={self.id}, email={self.email}, is_active={self.is_active})>"
 
@@ -162,6 +177,9 @@ class UserProfileModel(Base):
     __tablename__ = "user_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True,
+    )
     first_name: Mapped[Optional[str]] = mapped_column(String(100))
     last_name: Mapped[Optional[str]] = mapped_column(String(100))
     avatar: Mapped[Optional[str]] = mapped_column(String(255))

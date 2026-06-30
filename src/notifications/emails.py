@@ -27,6 +27,8 @@ class EmailSender(EmailSenderInterface):
         password_complete_email_template_name: str,
         payment_success_email_template_name: str,
         payment_refunded_email_template_name: str,
+        comment_reply_email_template_name: str,
+        comment_like_email_template_name: str,
     ):
         self._hostname = hostname
         self._port = port
@@ -39,6 +41,8 @@ class EmailSender(EmailSenderInterface):
         self._password_complete_email_template_name = password_complete_email_template_name
         self._payment_success_email_template_name = payment_success_email_template_name
         self._payment_refunded_email_template_name = payment_refunded_email_template_name
+        self._comment_reply_email_template_name = comment_reply_email_template_name
+        self._comment_like_email_template_name = comment_like_email_template_name
 
         self._env = Environment(loader=FileSystemLoader(template_dir))
 
@@ -200,6 +204,68 @@ class EmailSender(EmailSenderInterface):
         )
 
         subject = "Payment Refunded"
+
+        await self._send_email(
+            email,
+            subject,
+            html_content,
+        )
+
+    async def send_comment_reply_email(
+            self,
+            email: str,
+            username: str,
+            movie_name: str,
+            comment_text: str,
+            reply_text: str,
+    ) -> None:
+        """
+        Send a notification email when someone replies to a user's comment.
+        """
+
+        template = self._env.get_template(
+            self._comment_reply_email_template_name,
+        )
+
+        html_content = template.render(
+            username=username,
+            movie_name=movie_name,
+            comment_text=comment_text,
+            reply_text=reply_text,
+        )
+
+        subject = "New Reply to Your Comment"
+
+        await self._send_email(
+            email,
+            subject,
+            html_content,
+        )
+
+    async def send_comment_like_email(
+            self,
+            email: str,
+            username: str,
+            movie_name: str,
+            comment_text: str,
+            liked_by: str,
+    ) -> None:
+        """
+        Send a notification email when someone likes a user's comment.
+        """
+
+        template = self._env.get_template(
+            self._comment_like_email_template_name,
+        )
+
+        html_content = template.render(
+            username=username,
+            movie_name=movie_name,
+            comment_text=comment_text,
+            liked_by=liked_by,
+        )
+
+        subject = "Your Comment Received a Like"
 
         await self._send_email(
             email,

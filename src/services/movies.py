@@ -1,3 +1,4 @@
+import math
 from decimal import Decimal
 from math import ceil
 
@@ -17,6 +18,12 @@ from src.schemas.movies import (
     MovieCreateRequestSchema,
     MovieListResponseSchema,
     MovieUpdateRequestSchema,
+    MovieRatingRequestSchema,
+    MovieCommentResponseSchema,
+    MovieCommentCreateRequestSchema,
+    MovieCommentUpdateRequestSchema,
+    MovieCommentTreeResponseSchema,
+    MovieCommentListResponseSchema, MovieCommentAuthorSchema,
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -26,6 +33,13 @@ from src.database.models.movies import (
     MovieModel,
     MovieSortEnum,
     UserFavoriteMovieModel,
+    MovieRatingModel,
+    MovieCommentModel,
+    MovieCommentLikeModel,
+)
+from src.tasks.comments import (
+    send_comment_like_email_task,
+    send_comment_reply_email_task,
 )
 
 
@@ -191,6 +205,258 @@ class MovieService:
             )
 
         return movie
+
+    @staticmethod
+    async def _recalculate_rating(
+            movie: MovieModel,
+            db: AsyncSession,
+    ) -> None:
+        stmt = (
+            select(
+                func.avg(MovieRatingModel.rating),
+                func.count(MovieRatingModel.id),
+            )
+            .where(
+                MovieRatingModel.movie_id == movie.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        average, count = result.one()
+
+        movie.average_rating = (
+            Decimal(str(average or 0))
+            .quantize(Decimal("0.01"))
+        )
+
+        movie.ratings_count = int(count or 0)
+
+    @staticmethod
+    async def _get_movie_rating(
+            movie_id: int,
+            user_id: int,
+            db: AsyncSession,
+    ) -> MovieRatingModel | None:
+
+        stmt = (
+            select(MovieRatingModel)
+            .where(
+                MovieRatingModel.movie_id == movie_id,
+                MovieRatingModel.user_id == user_id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def _get_comment_or_404(
+            *,
+            db: AsyncSession,
+            comment_uuid: str | None = None,
+            comment_id: int | None = None,
+    ) -> MovieCommentModel:
+
+        if comment_uuid is None and comment_id is None:
+            raise ValueError(
+                "Either comment_uuid or comment_id must be provided."
+            )
+
+        stmt = (
+            select(MovieCommentModel)
+            .options(
+                selectinload(MovieCommentModel.user)
+                .selectinload(UserModel.profile),
+                selectinload(MovieCommentModel.movie),
+                selectinload(MovieCommentModel.parent),
+                selectinload(MovieCommentModel.likes),
+            )
+        )
+
+        if comment_uuid is not None:
+            stmt = stmt.where(
+                MovieCommentModel.uuid == comment_uuid,
+            )
+        else:
+            stmt = stmt.where(
+                MovieCommentModel.id == comment_id,
+            )
+
+        result = await db.execute(stmt)
+
+        comment = result.scalar_one_or_none()
+
+        if comment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Comment not found.",
+            )
+
+        return comment
+
+    @staticmethod
+    def _build_comment_tree(
+            comments: list[MovieCommentModel],
+            current_user: UserModel,
+    ) -> list[MovieCommentTreeResponseSchema]:
+
+        comment_map: dict[
+            int,
+            MovieCommentTreeResponseSchema,
+        ] = {}
+
+        roots: list[
+            MovieCommentTreeResponseSchema,
+        ] = []
+
+        for comment in comments:
+            schema = MovieService._build_comment_response(
+                comment=comment,
+                current_user=current_user,
+            )
+
+            tree_schema = MovieCommentTreeResponseSchema(
+                **schema.model_dump(),
+                replies=[],
+            )
+
+            comment_map[comment.id] = tree_schema
+
+        for comment in comments:
+
+            schema = comment_map[comment.id]
+
+            if comment.parent_comment_id is None:
+                roots.append(schema)
+
+            else:
+                parent = comment_map.get(
+                    comment.parent_comment_id,
+                )
+
+                if parent is not None:
+                    parent.replies.append(schema)
+
+        return roots
+
+    @staticmethod
+    async def _get_root_comments(
+            movie_id: int,
+            page: int,
+            page_size: int,
+            db: AsyncSession,
+    ) -> tuple[list[MovieCommentModel], int]:
+
+        total = await db.scalar(
+            select(func.count(MovieCommentModel.id))
+            .where(
+                MovieCommentModel.movie_id == movie_id,
+                MovieCommentModel.parent_comment_id.is_(None),
+            )
+        )
+
+        stmt = (
+            select(MovieCommentModel)
+            .options(
+                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.likes),
+            )
+            .where(
+                MovieCommentModel.movie_id == movie_id,
+                MovieCommentModel.parent_comment_id.is_(None),
+            )
+            .order_by(
+                MovieCommentModel.created_at.asc(),
+            )
+            .offset(
+                (page - 1) * page_size,
+            )
+            .limit(
+                page_size,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        comments = list(
+            result.scalars().all()
+        )
+
+        return comments, total or 0
+
+    @staticmethod
+    async def _get_replies(
+            movie_id: int,
+            db: AsyncSession,
+    ) -> list[MovieCommentModel]:
+
+        stmt = (
+            select(MovieCommentModel)
+            .options(
+                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.parent),
+                selectinload(MovieCommentModel.likes),
+            )
+            .where(
+                MovieCommentModel.movie_id == movie_id,
+                MovieCommentModel.parent_comment_id.is_not(None),
+            )
+            .order_by(
+                MovieCommentModel.created_at.asc(),
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return list(
+            result.scalars().all()
+        )
+
+    @staticmethod
+    def _build_comment_response(
+            comment: MovieCommentModel,
+            current_user: UserModel,
+    ) -> MovieCommentResponseSchema:
+
+        return MovieCommentResponseSchema(
+            uuid=comment.uuid,
+            text=comment.text,
+            likes_count=comment.likes_count,
+            replies_count=comment.replies_count,
+            is_liked=any(
+                like.user_id == current_user.id
+                for like in comment.likes
+            ),
+            is_edited=comment.is_edited,
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+            parent_comment_uuid=comment.parent_comment_uuid,
+            author=MovieCommentAuthorSchema(
+                username=comment.user.profile.username,
+            ),
+        )
+
+    @staticmethod
+    async def _get_comment_like(
+            *,
+            comment_id: int,
+            user_id: int,
+            db: AsyncSession,
+    ) -> MovieCommentLikeModel | None:
+
+        stmt = (
+            select(MovieCommentLikeModel)
+            .where(
+                MovieCommentLikeModel.comment_id == comment_id,
+                MovieCommentLikeModel.user_id == user_id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create_movie(
@@ -597,3 +863,331 @@ class MovieService:
         await db.delete(favorite)
 
         await db.commit()
+
+    @staticmethod
+    async def rate_movie(
+            movie_uuid: str,
+            data: MovieRatingRequestSchema,
+            current_user: UserModel,
+            db: AsyncSession,
+    ):
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        stmt = (
+            select(MovieRatingModel)
+            .where(
+                MovieRatingModel.user_id == current_user.id,
+                MovieRatingModel.movie_id == movie.id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        movie_rating = result.scalar_one_or_none()
+
+        if movie_rating is None:
+            movie_rating = MovieRatingModel(
+                user_id=current_user.id,
+                movie_id=movie.id,
+                rating=data.rating,
+            )
+
+            db.add(movie_rating)
+
+        else:
+            movie_rating.rating = data.rating
+
+        await db.flush()
+
+        await MovieService._recalculate_rating(
+            movie,
+            db,
+        )
+
+        await db.commit()
+
+    @staticmethod
+    async def get_user_rating(
+            movie_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieRatingModel | None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        return await MovieService._get_movie_rating(
+            movie_id=movie.id,
+            user_id=current_user.id,
+            db=db,
+        )
+
+    @staticmethod
+    async def delete_rating(
+            movie_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        movie_rating = await MovieService._get_movie_rating(
+            movie_id=movie.id,
+            user_id=current_user.id,
+            db=db,
+        )
+
+        if movie_rating is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Rating not found.",
+            )
+
+        await db.delete(movie_rating)
+
+        await db.flush()
+
+        await MovieService._recalculate_rating(
+            movie,
+            db,
+        )
+
+        await db.commit()
+
+    @staticmethod
+    async def create_comment(
+            movie_uuid: str,
+            data: MovieCommentCreateRequestSchema,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieCommentResponseSchema:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        parent_comment = None
+
+        if data.parent_comment_uuid is not None:
+            parent_comment = await MovieService._get_comment_or_404(
+                db=db,
+                comment_uuid=data.parent_comment_uuid,
+            )
+
+            if parent_comment.movie_id != movie.id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Parent comment belongs to another movie.",
+                )
+
+        comment = MovieCommentModel(
+            user_id=current_user.id,
+            movie_id=movie.id,
+            parent_comment_id=(
+                parent_comment.id
+                if parent_comment is not None
+                else None
+            ),
+            text=data.text,
+        )
+
+        db.add(comment)
+
+        if parent_comment is not None:
+            parent_comment.replies_count += 1
+
+        await db.commit()
+
+        if parent_comment is not None:
+            send_comment_reply_email_task.delay(
+                comment.id,
+            )
+
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_id=comment.id,
+        )
+
+        return MovieService._build_comment_response(
+            comment=comment,
+            current_user=current_user,
+        )
+
+    @staticmethod
+    async def update_comment(
+            comment_uuid: str,
+            data: MovieCommentUpdateRequestSchema,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieCommentResponseSchema:
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_uuid=comment_uuid,
+        )
+
+        if comment.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can edit only your own comments.",
+            )
+
+        comment.text = data.text
+        comment.is_edited = True
+
+        await db.commit()
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_id=comment.id,
+        )
+
+        return MovieService._build_comment_response(
+            comment=comment,
+            current_user=current_user,
+        )
+
+    @staticmethod
+    async def delete_comment(
+            comment_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_uuid=comment_uuid,
+        )
+
+        if comment.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can delete only your own comments.",
+            )
+
+        if comment.parent is not None:
+            comment.parent.replies_count -= 1
+
+        await db.delete(comment)
+
+        await db.commit()
+
+    @staticmethod
+    async def get_movie_comments(
+            movie_uuid: str,
+            page: int,
+            page_size: int,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieCommentListResponseSchema:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        root_comments, total = await MovieService._get_root_comments(
+            movie_id=movie.id,
+            page=page,
+            page_size=page_size,
+            db=db,
+        )
+
+        replies = await MovieService._get_replies(
+            movie_id=movie.id,
+            db=db,
+        )
+
+        comments = root_comments + replies
+
+        tree = MovieService._build_comment_tree(
+            comments=comments,
+            current_user=current_user,
+        )
+
+        return MovieCommentListResponseSchema(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=math.ceil(total / page_size)
+            if total > 0
+            else 1,
+            items=tree,
+        )
+
+    @staticmethod
+    async def _like_comment(
+            comment: MovieCommentModel,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        like = MovieCommentLikeModel(
+            comment_id=comment.id,
+            user_id=current_user.id,
+        )
+
+        db.add(like)
+
+        comment.likes_count += 1
+
+        await db.flush()
+        await db.commit()
+
+        send_comment_like_email_task.delay(
+            like.id,
+        )
+
+    @staticmethod
+    async def _unlike_comment(
+            comment: MovieCommentModel,
+            like: MovieCommentLikeModel,
+            db: AsyncSession,
+    ) -> None:
+
+        await db.delete(like)
+
+        comment.likes_count = max(
+            comment.likes_count - 1,
+            0,
+        )
+
+        await db.commit()
+
+    @staticmethod
+    async def toggle_comment_like(
+            comment_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_uuid=comment_uuid,
+        )
+
+        like = await MovieService._get_comment_like(
+            comment_id=comment.id,
+            user_id=current_user.id,
+            db=db,
+        )
+
+        if like is None:
+            await MovieService._like_comment(
+                comment=comment,
+                current_user=current_user,
+                db=db,
+            )
+        else:
+            await MovieService._unlike_comment(
+                comment=comment,
+                like=like,
+                db=db,
+            )
