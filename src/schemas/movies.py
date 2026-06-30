@@ -134,3 +134,12 @@ class MovieCommentResponseSchema(MovieCommentBaseSchema):
     model_config = {
         "from_attributes": True,
     }
+
+
+class MovieCommentTreeResponseSchema(
+    MovieCommentResponseSchema
+):
+    replies: list["MovieCommentTreeResponseSchema"] = []
+
+
+MovieCommentTreeResponseSchema.model_rebuild()
