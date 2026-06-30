@@ -139,7 +139,9 @@ class MovieCommentResponseSchema(MovieCommentBaseSchema):
 class MovieCommentTreeResponseSchema(
     MovieCommentResponseSchema
 ):
-    replies: list["MovieCommentTreeResponseSchema"] = []
+    replies: list["MovieCommentTreeResponseSchema"] = Field(
+        default_factory=list,
+    )
 
 
 MovieCommentTreeResponseSchema.model_rebuild()

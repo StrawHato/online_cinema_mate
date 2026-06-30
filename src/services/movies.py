@@ -1,3 +1,4 @@
+import math
 from decimal import Decimal
 from math import ceil
 
@@ -22,6 +23,7 @@ from src.schemas.movies import (
     MovieCommentCreateRequestSchema,
     MovieCommentUpdateRequestSchema,
     MovieCommentTreeResponseSchema,
+    MovieCommentListResponseSchema,
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -1012,3 +1014,46 @@ class MovieService:
         await db.delete(comment)
 
         await db.commit()
+
+    @staticmethod
+    async def get_movie_comments(
+            movie_uuid: str,
+            page: int,
+            page_size: int,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieCommentListResponseSchema:
+
+        movie = await MovieService._get_movie_or_404(
+            movie_uuid=movie_uuid,
+            db=db,
+        )
+
+        root_comments, total = await MovieService._get_root_comments(
+            movie_id=movie.id,
+            page=page,
+            page_size=page_size,
+            db=db,
+        )
+
+        replies = await MovieService._get_replies(
+            movie_id=movie.id,
+            db=db,
+        )
+
+        comments = root_comments + replies
+
+        tree = MovieService._build_comment_tree(
+            comments=comments,
+            current_user=current_user,
+        )
+
+        return MovieCommentListResponseSchema(
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=math.ceil(total / page_size)
+            if total > 0
+            else 1,
+            items=tree,
+        )
