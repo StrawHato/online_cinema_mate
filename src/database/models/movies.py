@@ -504,6 +504,16 @@ class MovieCommentModel(Base):
         nullable=False,
     )
 
+    likes_count: Mapped[int] = mapped_column(
+        default=0,
+        nullable=False,
+    )
+
+    replies_count: Mapped[int] = mapped_column(
+        default=0,
+        nullable=False,
+    )
+
     is_edited: Mapped[bool] = mapped_column(
         Boolean,
         default=False,
@@ -543,6 +553,13 @@ class MovieCommentModel(Base):
         back_populates="parent",
         cascade="all, delete-orphan",
         lazy="selectin",
+        order_by="MovieCommentModel.created_at",
+    )
+
+    likes: Mapped[list["MovieCommentLikeModel"]] = relationship(
+        back_populates="comment",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )
 
     __table_args__ = (
@@ -551,6 +568,10 @@ class MovieCommentModel(Base):
             "movie_id",
             "parent_comment_id",
         ),
+        Index(
+            "ix_movie_comments_user",
+            "user_id",
+        )
     )
 
     def __repr__(self) -> str:
@@ -559,5 +580,63 @@ class MovieCommentModel(Base):
             f"id={self.id}, "
             f"user_id={self.user_id}, "
             f"movie_id={self.movie_id}"
+            f")>"
+        )
+
+
+class MovieCommentLikeModel(Base):
+    __tablename__ = "movie_comment_likes"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    comment_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "movie_comments.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    user: Mapped["UserModel"] = relationship(
+        back_populates="comment_likes",
+        lazy="selectin",
+    )
+
+    comment: Mapped["MovieCommentModel"] = relationship(
+        back_populates="likes",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "comment_id",
+            name="uq_user_comment_like",
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<MovieCommentLike("
+            f"user_id={self.user_id}, "
+            f"comment_id={self.comment_id}"
             f")>"
         )
