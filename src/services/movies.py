@@ -1141,7 +1141,7 @@ class MovieService:
         await db.delete(like)
 
         comment.likes_count = max(
-            comment.likes_count,
+            comment.likes_count - 1,
             0,
         )
 
