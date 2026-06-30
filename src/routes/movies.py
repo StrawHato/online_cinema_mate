@@ -268,3 +268,24 @@ async def update_comment(
         current_user=current_user,
         db=db,
     )
+
+
+@router.delete(
+    "/comments/{comment_uuid}/",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_comment(
+    comment_uuid: str,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Response:
+
+    await MovieService.delete_comment(
+        comment_uuid=comment_uuid,
+        current_user=current_user,
+        db=db,
+    )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT,
+    )
