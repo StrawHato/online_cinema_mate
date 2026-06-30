@@ -35,6 +35,7 @@ from src.database.models.movies import (
     UserFavoriteMovieModel,
     MovieRatingModel,
     MovieCommentModel,
+    MovieCommentLikeModel,
 )
 
 
@@ -406,6 +407,26 @@ class MovieService:
         return list(
             result.scalars().all()
         )
+
+    @staticmethod
+    async def _get_comment_like(
+            *,
+            comment_id: int,
+            user_id: int,
+            db: AsyncSession,
+    ) -> MovieCommentLikeModel | None:
+
+        stmt = (
+            select(MovieCommentLikeModel)
+            .where(
+                MovieCommentLikeModel.comment_id == comment_id,
+                MovieCommentLikeModel.user_id == user_id,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return result.scalar_one_or_none()
 
     @staticmethod
     async def create_movie(
