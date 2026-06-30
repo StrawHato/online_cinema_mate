@@ -1112,3 +1112,34 @@ class MovieService:
         )
 
         await db.commit()
+
+    @staticmethod
+    async def toggle_comment_like(
+            comment_uuid: str,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> None:
+
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_uuid=comment_uuid,
+        )
+
+        like = await MovieService._get_comment_like(
+            comment_id=comment.id,
+            user_id=current_user.id,
+            db=db,
+        )
+
+        if like is None:
+            await MovieService._like_comment(
+                comment=comment,
+                current_user=current_user,
+                db=db,
+            )
+        else:
+            await MovieService._unlike_comment(
+                comment=comment,
+                like=like,
+                db=db,
+            )
