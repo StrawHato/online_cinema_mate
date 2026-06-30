@@ -19,7 +19,7 @@ from src.schemas.movies import (
     MovieRatingRequestSchema,
     MovieRatingResponseSchema,
     MovieCommentResponseSchema,
-    MovieCommentCreateRequestSchema,
+    MovieCommentCreateRequestSchema, MovieCommentListResponseSchema,
 )
 from src.security.http import get_current_admin, get_current_user
 from src.database.models.accounts import UserModel
@@ -223,6 +223,27 @@ async def create_comment(
     return await MovieService.create_comment(
         movie_uuid=movie_uuid,
         data=data,
+        current_user=current_user,
+        db=db,
+    )
+
+
+@router.get(
+    "/{movie_uuid}/comments/",
+    response_model=MovieCommentListResponseSchema,
+)
+async def get_movie_comments(
+    movie_uuid: str,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=50),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> MovieCommentListResponseSchema:
+
+    return await MovieService.get_movie_comments(
+        movie_uuid=movie_uuid,
+        page=page,
+        page_size=page_size,
         current_user=current_user,
         db=db,
     )
