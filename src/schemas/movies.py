@@ -143,3 +143,12 @@ class MovieCommentTreeResponseSchema(
 
 
 MovieCommentTreeResponseSchema.model_rebuild()
+
+
+class MovieCommentListResponseSchema(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+    items: list[MovieCommentTreeResponseSchema]
