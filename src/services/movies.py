@@ -27,6 +27,7 @@ from src.database.models.movies import (
     MovieSortEnum,
     UserFavoriteMovieModel,
     MovieRatingModel,
+    MovieCommentModel,
 )
 
 
@@ -237,6 +238,49 @@ class MovieService:
         result = await db.execute(stmt)
 
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def _get_comment_or_404(
+            *,
+            db: AsyncSession,
+            comment_uuid: str | None = None,
+            comment_id: int | None = None,
+    ) -> MovieCommentModel:
+
+        if comment_uuid is None and comment_id is None:
+            raise ValueError(
+                "Either comment_uuid or comment_id must be provided."
+            )
+
+        stmt = (
+            select(MovieCommentModel)
+            .options(
+                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.movie),
+                selectinload(MovieCommentModel.parent),
+            )
+        )
+
+        if comment_uuid is not None:
+            stmt = stmt.where(
+                MovieCommentModel.uuid == comment_uuid,
+            )
+        else:
+            stmt = stmt.where(
+                MovieCommentModel.id == comment_id,
+            )
+
+        result = await db.execute(stmt)
+
+        comment = result.scalar_one_or_none()
+
+        if comment is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Comment not found.",
+            )
+
+        return comment
 
     @staticmethod
     async def create_movie(
