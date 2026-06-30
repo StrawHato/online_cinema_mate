@@ -263,9 +263,11 @@ class MovieService:
         stmt = (
             select(MovieCommentModel)
             .options(
-                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.user)
+                .selectinload(UserModel.profile),
                 selectinload(MovieCommentModel.movie),
                 selectinload(MovieCommentModel.parent),
+                selectinload(MovieCommentModel.likes),
             )
         )
 
@@ -306,18 +308,17 @@ class MovieService:
         ] = []
 
         for comment in comments:
-            schema = MovieCommentTreeResponseSchema.model_validate(
-                comment,
+            schema = MovieService._build_comment_response(
+                comment=comment,
+                current_user=current_user,
             )
 
-            schema.is_liked = any(
-                like.user_id == current_user.id
-                for like in comment.likes
+            tree_schema = MovieCommentTreeResponseSchema(
+                **schema.model_dump(),
+                replies=[],
             )
 
-            schema.replies = []
-
-            comment_map[comment.id] = schema
+            comment_map[comment.id] = tree_schema
 
         for comment in comments:
 
@@ -325,6 +326,7 @@ class MovieService:
 
             if comment.parent_comment_id is None:
                 roots.append(schema)
+
             else:
                 parent = comment_map.get(
                     comment.parent_comment_id,
@@ -1002,10 +1004,14 @@ class MovieService:
 
         await db.commit()
 
-        await db.refresh(comment)
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_id=comment.id,
+        )
 
-        return MovieCommentResponseSchema.model_validate(
-            comment,
+        return MovieService._build_comment_response(
+            comment=comment,
+            current_user=current_user,
         )
 
     @staticmethod
@@ -1030,10 +1036,14 @@ class MovieService:
         comment.is_edited = True
 
         await db.commit()
-        await db.refresh(comment)
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_id=comment.id,
+        )
 
-        return MovieCommentResponseSchema.model_validate(
-            comment,
+        return MovieService._build_comment_response(
+            comment=comment,
+            current_user=current_user,
         )
 
     @staticmethod
