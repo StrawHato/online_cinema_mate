@@ -90,3 +90,11 @@ class MovieRatingSummarySchema(BaseModel):
 
 class MovieUserRatingSchema(BaseModel):
     rating: int | None
+
+class MovieCommentAuthorSchema(BaseModel):
+    uuid: str
+    username: str
+
+    model_config = {
+        "from_attributes": True,
+    }
