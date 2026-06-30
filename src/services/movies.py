@@ -336,6 +336,51 @@ class MovieService:
         return roots
 
     @staticmethod
+    async def _get_root_comments(
+            movie_id: int,
+            page: int,
+            page_size: int,
+            db: AsyncSession,
+    ) -> tuple[list[MovieCommentModel], int]:
+
+        total = await db.scalar(
+            select(func.count(MovieCommentModel.id))
+            .where(
+                MovieCommentModel.movie_id == movie_id,
+                MovieCommentModel.parent_comment_id.is_(None),
+            )
+        )
+
+        stmt = (
+            select(MovieCommentModel)
+            .options(
+                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.likes),
+            )
+            .where(
+                MovieCommentModel.movie_id == movie_id,
+                MovieCommentModel.parent_comment_id.is_(None),
+            )
+            .order_by(
+                MovieCommentModel.created_at.asc(),
+            )
+            .offset(
+                (page - 1) * page_size,
+            )
+            .limit(
+                page_size,
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        comments = list(
+            result.scalars().all()
+        )
+
+        return comments, total or 0
+
+    @staticmethod
     async def create_movie(
             movie_data: MovieCreateRequestSchema,
             db: AsyncSession,
