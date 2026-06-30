@@ -381,6 +381,34 @@ class MovieService:
         return comments, total or 0
 
     @staticmethod
+    async def _get_replies(
+            movie_id: int,
+            db: AsyncSession,
+    ) -> list[MovieCommentModel]:
+
+        stmt = (
+            select(MovieCommentModel)
+            .options(
+                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.parent),
+                selectinload(MovieCommentModel.likes),
+            )
+            .where(
+                MovieCommentModel.movie_id == movie_id,
+                MovieCommentModel.parent_comment_id.is_not(None),
+            )
+            .order_by(
+                MovieCommentModel.created_at.asc(),
+            )
+        )
+
+        result = await db.execute(stmt)
+
+        return list(
+            result.scalars().all()
+        )
+
+    @staticmethod
     async def create_movie(
             movie_data: MovieCreateRequestSchema,
             db: AsyncSession,
