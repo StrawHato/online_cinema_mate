@@ -16,7 +16,8 @@ from sqlalchemy import (
     DateTime,
     func,
     UniqueConstraint,
-    Index
+    Index,
+    Boolean
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -347,6 +348,11 @@ class MovieModel(Base):
         cascade="all, delete-orphan",
     )
 
+    comments: Mapped[list["MovieCommentModel"]] = relationship(
+        back_populates="movie",
+        cascade="all, delete-orphan",
+    )
+
     __table_args__ = (
         CheckConstraint("imdb >= 0 AND imdb <= 10"),
         CheckConstraint("price >= 0"),
@@ -449,3 +455,109 @@ class MovieRatingModel(Base):
             "movie_id",
         ),
     )
+
+
+class MovieCommentModel(Base):
+    __tablename__ = "movie_comments"
+
+    id: Mapped[int] = mapped_column(
+        primary_key=True,
+    )
+
+    uuid: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        nullable=False,
+        default=lambda: str(uuid4()),
+        index=True,
+    )
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "users.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    movie_id: Mapped[int] = mapped_column(
+        ForeignKey(
+            "movies.id",
+            ondelete="CASCADE",
+        ),
+        nullable=False,
+        index=True,
+    )
+
+    parent_comment_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "movie_comments.id",
+            ondelete="CASCADE",
+        ),
+        nullable=True,
+        index=True,
+    )
+
+    text: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+    )
+
+    is_edited: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+    )
+
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        nullable=False,
+    )
+
+    user: Mapped["UserModel"] = relationship(
+        back_populates="comments",
+        lazy="selectin",
+    )
+
+    movie: Mapped["MovieModel"] = relationship(
+        back_populates="comments",
+        lazy="selectin",
+    )
+
+    parent: Mapped["MovieCommentModel | None"] = relationship(
+        "MovieCommentModel",
+        remote_side=[id],
+        back_populates="children",
+    )
+
+    children: Mapped[list["MovieCommentModel"]] = relationship(
+        back_populates="parent",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+    __table_args__ = (
+        Index(
+            "ix_movie_comments_movie_parent",
+            "movie_id",
+            "parent_comment_id",
+        ),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<MovieComment("
+            f"id={self.id}, "
+            f"user_id={self.user_id}, "
+            f"movie_id={self.movie_id}"
+            f")>"
+        )
