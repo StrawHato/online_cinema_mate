@@ -299,12 +299,10 @@ class MovieService:
         ] = {}
 
         roots: list[
-            MovieCommentTreeResponseSchema
+            MovieCommentTreeResponseSchema,
         ] = []
 
         for comment in comments:
-            comment.author = comment.user
-
             schema = MovieCommentTreeResponseSchema.model_validate(
                 comment,
             )
@@ -324,7 +322,6 @@ class MovieService:
 
             if comment.parent_comment_id is None:
                 roots.append(schema)
-
             else:
                 parent = comment_map.get(
                     comment.parent_comment_id,

@@ -21,6 +21,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from src.database.models import UserModel
 from src.database.models.base import Base
 
 
@@ -561,6 +562,18 @@ class MovieCommentModel(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+
+    @property
+    def author(self):
+        return self.user
+
+    @property
+    def parent_comment_uuid(self):
+        return (
+            self.parent.uuid
+            if self.parent
+            else None
+        )
 
     __table_args__ = (
         Index(
