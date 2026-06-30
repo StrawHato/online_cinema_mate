@@ -37,6 +37,10 @@ from src.database.models.movies import (
     MovieCommentModel,
     MovieCommentLikeModel,
 )
+from src.tasks.comments import (
+    send_comment_like_email_task,
+    send_comment_reply_email_task,
+)
 
 
 SORT_MAPPING = {
@@ -1004,6 +1008,11 @@ class MovieService:
 
         await db.commit()
 
+        if parent_comment is not None:
+            send_comment_reply_email_task.delay(
+                comment.id,
+            )
+
         comment = await MovieService._get_comment_or_404(
             db=db,
             comment_id=comment.id,
@@ -1129,7 +1138,12 @@ class MovieService:
 
         comment.likes_count += 1
 
+        await db.flush()
         await db.commit()
+
+        send_comment_like_email_task.delay(
+            like.id,
+        )
 
     @staticmethod
     async def _unlike_comment(
