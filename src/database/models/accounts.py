@@ -177,6 +177,9 @@ class UserProfileModel(Base):
     __tablename__ = "user_profiles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(
+        String(100), unique=True, nullable=False, index=True,
+    )
     first_name: Mapped[Optional[str]] = mapped_column(String(100))
     last_name: Mapped[Optional[str]] = mapped_column(String(100))
     avatar: Mapped[Optional[str]] = mapped_column(String(255))
