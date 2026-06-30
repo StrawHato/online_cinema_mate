@@ -113,3 +113,24 @@ class MovieCommentCreateRequestSchema(MovieCommentBaseSchema):
 
 class MovieCommentUpdateRequestSchema(MovieCommentBaseSchema):
     pass
+
+
+class MovieCommentResponseSchema(MovieCommentBaseSchema):
+    uuid: str
+
+    author: MovieCommentAuthorSchema
+
+    parent_comment_uuid: str | None
+
+    likes_count: int
+    replies_count: int
+
+    is_edited: bool
+    is_liked: bool
+
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {
+        "from_attributes": True,
+    }
