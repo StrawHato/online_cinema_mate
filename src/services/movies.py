@@ -23,7 +23,7 @@ from src.schemas.movies import (
     MovieCommentCreateRequestSchema,
     MovieCommentUpdateRequestSchema,
     MovieCommentTreeResponseSchema,
-    MovieCommentListResponseSchema,
+    MovieCommentListResponseSchema, MovieCommentAuthorSchema,
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -406,6 +406,30 @@ class MovieService:
 
         return list(
             result.scalars().all()
+        )
+
+    @staticmethod
+    def _build_comment_response(
+            comment: MovieCommentModel,
+            current_user: UserModel,
+    ) -> MovieCommentResponseSchema:
+
+        return MovieCommentResponseSchema(
+            uuid=comment.uuid,
+            text=comment.text,
+            likes_count=comment.likes_count,
+            replies_count=comment.replies_count,
+            is_liked=any(
+                like.user_id == current_user.id
+                for like in comment.likes
+            ),
+            is_edited=comment.is_edited,
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+            parent_comment_uuid=comment.parent_comment_uuid,
+            author=MovieCommentAuthorSchema(
+                username=comment.user.profile.username,
+            ),
         )
 
     @staticmethod
