@@ -105,3 +105,11 @@ class MovieCommentBaseSchema(BaseModel):
         min_length=1,
         max_length=5000,
     )
+
+
+class MovieCommentCreateRequestSchema(MovieCommentBaseSchema):
+    parent_comment_uuid: str | None = None
+
+
+class MovieCommentUpdateRequestSchema(MovieCommentBaseSchema):
+    pass
