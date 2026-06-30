@@ -20,6 +20,7 @@ from src.schemas.movies import (
     MovieRatingRequestSchema,
     MovieCommentResponseSchema,
     MovieCommentCreateRequestSchema,
+    MovieCommentUpdateRequestSchema,
 )
 from src.database.models.movies import (
     CertificationModel,
@@ -835,6 +836,34 @@ class MovieService:
 
         await db.commit()
 
+        await db.refresh(comment)
+
+        return MovieCommentResponseSchema.model_validate(
+            comment,
+        )
+
+    @staticmethod
+    async def update_comment(
+            comment_uuid: str,
+            data: MovieCommentUpdateRequestSchema,
+            current_user: UserModel,
+            db: AsyncSession,
+    ) -> MovieCommentResponseSchema:
+        comment = await MovieService._get_comment_or_404(
+            db=db,
+            comment_uuid=comment_uuid,
+        )
+
+        if comment.user_id != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You can edit only your own comments.",
+            )
+
+        comment.text = data.text
+        comment.is_edited = True
+
+        await db.commit()
         await db.refresh(comment)
 
         return MovieCommentResponseSchema.model_validate(
