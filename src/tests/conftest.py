@@ -3,13 +3,15 @@ import os
 
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import insert
+from sqlalchemy import insert, select
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
+from src.security.http import get_current_admin
+from src.database.models import UserModel
 from src.config.settings import get_settings, Settings
 from src.security.interfaces import JWTAuthManagerInterface
 from src.security.token_manager import JWTAuthManager
@@ -175,6 +177,53 @@ async def user_groups(
     await db_session.commit()
 
     yield db_session
+
+
+@pytest_asyncio.fixture(scope="function")
+async def admin_user(
+    db_session: AsyncSession,
+    user_groups: AsyncSession,
+) -> UserModel:
+    """
+    Create admin user.
+    """
+    group = await db_session.scalar(
+        select(UserGroupModel).where(
+            UserGroupModel.name == UserGroupEnum.ADMIN
+        )
+    )
+
+    admin = UserModel.create(
+        email="admin@example.com",
+        raw_password="AdminPassword123!",
+        group_id=group.id,
+    )
+
+    admin.is_active = True
+
+    db_session.add(admin)
+
+    await db_session.commit()
+    await db_session.refresh(admin)
+
+    return admin
+
+
+@pytest_asyncio.fixture(scope="function")
+async def admin_client(
+    client: AsyncClient,
+    admin_user: UserModel,
+):
+    app.dependency_overrides[
+        get_current_admin
+    ] = lambda: admin_user
+
+    yield client
+
+    app.dependency_overrides.pop(
+        get_current_admin,
+        None,
+    )
 
 
 @pytest_asyncio.fixture(scope="session")
