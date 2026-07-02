@@ -218,9 +218,17 @@ async def admin_user(
     db_session.add(admin)
 
     await db_session.commit()
-    await db_session.refresh(admin)
 
-    return admin
+    result = await db_session.execute(
+        select(UserModel)
+        .options(
+            joinedload(UserModel.group),
+            joinedload(UserModel.profile),
+        )
+        .where(UserModel.id == admin.id)
+    )
+
+    return result.unique().scalar_one()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -229,10 +237,19 @@ async def admin_client(
     admin_user: UserModel,
 ):
     app.dependency_overrides[
+        get_current_user
+    ] = lambda: admin_user
+
+    app.dependency_overrides[
         get_current_admin
     ] = lambda: admin_user
 
     yield client
+
+    app.dependency_overrides.pop(
+        get_current_user,
+        None,
+    )
 
     app.dependency_overrides.pop(
         get_current_admin,
