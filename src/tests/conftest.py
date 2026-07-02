@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.orm import joinedload
 
 from src.database.models import UserProfileModel
 from src.security.http import get_current_admin, get_current_user
@@ -314,9 +315,17 @@ async def regular_user(
     db_session.add(profile)
 
     await db_session.commit()
-    await db_session.refresh(user)
 
-    return user
+    result = await db_session.execute(
+        select(UserModel)
+        .options(
+            joinedload(UserModel.profile),
+            joinedload(UserModel.group),
+        )
+        .where(UserModel.id == user.id)
+    )
+
+    return result.unique().scalar_one()
 
 
 @pytest_asyncio.fixture(scope="function")
