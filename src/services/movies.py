@@ -360,7 +360,9 @@ class MovieService:
         stmt = (
             select(MovieCommentModel)
             .options(
-                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.user).selectinload(
+                    UserModel.profile,
+                ),
                 selectinload(MovieCommentModel.likes),
             )
             .where(
@@ -395,7 +397,9 @@ class MovieService:
         stmt = (
             select(MovieCommentModel)
             .options(
-                selectinload(MovieCommentModel.user),
+                selectinload(MovieCommentModel.user).selectinload(
+                    UserModel.profile,
+                ),
                 selectinload(MovieCommentModel.parent),
                 selectinload(MovieCommentModel.likes),
             )

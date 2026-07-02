@@ -48,6 +48,11 @@ class Settings(BaseSettings):
     STRIPE_SUCCESS_URL: str
     STRIPE_CANCEL_URL: str
 
+    BACKEND_URL: str = os.getenv(
+        "BACKEND_URL",
+        "http://127.0.0.1:8000"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

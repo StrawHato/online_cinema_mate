@@ -64,6 +64,33 @@ async def get_orders(
 
 
 @router.get(
+    "/admin/",
+    response_model=OrderListResponseSchema,
+    summary="Get all orders",
+)
+async def get_all_orders(
+    db: AsyncSession = Depends(get_db),
+    current_user: UserModel = Depends(get_current_moderator),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=20),
+    user_id: int | None = None,
+    status: OrderStatusEnum | None = None,
+    created_from: datetime | None = None,
+    created_to: datetime | None = None,
+) -> OrderListResponseSchema:
+
+    return await OrderService.get_all_orders(
+        db=db,
+        page=page,
+        page_size=page_size,
+        user_id=user_id,
+        status=status,
+        created_from=created_from,
+        created_to=created_to,
+    )
+
+
+@router.get(
     "/{order_uuid}/",
     response_model=OrderResponseSchema,
     summary="Get order",
@@ -100,31 +127,4 @@ async def cancel_order(
 
     return Response(
         status_code=status.HTTP_204_NO_CONTENT,
-    )
-
-
-@router.get(
-    "/admin/",
-    response_model=OrderListResponseSchema,
-    summary="Get all orders",
-)
-async def get_all_orders(
-    db: AsyncSession = Depends(get_db),
-    current_user: UserModel = Depends(get_current_moderator),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=20),
-    user_id: int | None = None,
-    status: OrderStatusEnum | None = None,
-    created_from: datetime | None = None,
-    created_to: datetime | None = None,
-) -> OrderListResponseSchema:
-
-    return await OrderService.get_all_orders(
-        db=db,
-        page=page,
-        page_size=page_size,
-        user_id=user_id,
-        status=status,
-        created_from=created_from,
-        created_to=created_to,
     )

@@ -91,8 +91,6 @@ class ProfileService:
 
         await db.commit()
 
-        await db.refresh(profile)
-
         return ProfileResponseSchema.model_validate(
             profile,
         )
