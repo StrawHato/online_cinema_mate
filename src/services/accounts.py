@@ -34,7 +34,9 @@ from src.schemas.accounts import (
     ResendActivationRequestSchema,
 )
 from src.tasks.emails import (
-    send_activation_email_task, send_activation_complete_email_task, send_password_reset_email_task,
+    send_activation_email_task,
+    send_activation_complete_email_task,
+    send_password_reset_email_task,
     send_password_reset_complete_email_task
 )
 from src.security.interfaces import JWTAuthManagerInterface
@@ -112,6 +114,7 @@ class AccountsService:
 
             profile = UserProfileModel(
                 user=new_user,
+                username=new_user.email.split("@")[0] + "_" + str(new_user.id),
             )
             db.add(profile)
 
