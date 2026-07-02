@@ -1,6 +1,9 @@
 from collections.abc import AsyncGenerator
 import os
+from pathlib import Path
+from unittest.mock import patch
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import insert, select
@@ -31,8 +34,17 @@ from src.tests.doubles.fakes.storage import FakeS3Storage
 from src.tests.doubles.stubs.emails import StubEmailSender
 from src.tests.doubles.stubs.stripe import StubStripeService
 
-TEST_DATABASE_PATH = "tests/test.db"
-TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DATABASE_PATH}"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+TEST_DATABASE_PATH = PROJECT_ROOT / "test.db"
+
+TEST_DATABASE_URL = (
+    f"sqlite+aiosqlite:///{TEST_DATABASE_PATH.as_posix()}"
+)
+TEST_DATABASE_PATH.parent.mkdir(
+    parents=True,
+    exist_ok=True,
+)
 
 engine = create_async_engine(
     TEST_DATABASE_URL,
@@ -78,9 +90,6 @@ async def setup_database() -> AsyncGenerator[None, None]:
     yield
 
     await engine.dispose()
-
-    if os.path.exists(TEST_DATABASE_PATH):
-        os.remove(TEST_DATABASE_PATH)
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
@@ -149,8 +158,11 @@ async def client(
     ] = lambda: stripe_stub
 
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test",
+            transport=ASGITransport(
+                app=app,
+                raise_app_exceptions=True,
+            ),
+            base_url="http://test",
     ) as async_client:
         try:
             yield async_client
@@ -246,3 +258,26 @@ async def jwt_manager(
         secret_key_refresh=settings.SECRET_KEY_REFRESH,
         algorithm=settings.JWT_SIGNING_ALGORITHM,
     )
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_celery_tasks():
+    """
+    Disable all Celery tasks during integration tests.
+    Tasks are replaced with mocks, so no Redis,
+    no asyncio.run(), and no external side effects.
+    """
+    with (
+        patch("src.services.accounts.send_activation_email_task") as activation_email,
+        patch("src.services.accounts.send_activation_complete_email_task") as activation_complete_email,
+        patch("src.services.accounts.send_password_reset_email_task") as password_reset_email,
+        patch("src.services.accounts.send_password_reset_complete_email_task") as password_reset_complete_email,
+
+        patch("src.services.payments.send_payment_success_email_task") as payment_success_email,
+        patch("src.services.payments.send_payment_refunded_email_task") as payment_refunded_email,
+
+        patch("src.services.movies.send_comment_reply_email_task") as comment_reply_email,
+        patch("src.services.movies.send_comment_like_email_task") as comment_like_email,
+
+    ):
+        yield
