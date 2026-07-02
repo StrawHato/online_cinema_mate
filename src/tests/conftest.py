@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from src.security.http import get_current_admin
+from src.database.models import UserProfileModel
+from src.security.http import get_current_admin, get_current_user
 from src.database.models import UserModel
 from src.config.settings import get_settings, Settings
 from src.security.interfaces import JWTAuthManagerInterface
@@ -281,3 +282,55 @@ def mock_celery_tasks():
 
     ):
         yield
+
+
+@pytest_asyncio.fixture(scope="function")
+async def regular_user(
+    db_session: AsyncSession,
+    user_groups: AsyncSession,
+) -> UserModel:
+    group = await db_session.scalar(
+        select(UserGroupModel).where(
+            UserGroupModel.name == UserGroupEnum.USER
+        )
+    )
+
+    user = UserModel.create(
+        email="user@example.com",
+        raw_password="StrongPassword123!",
+        group_id=group.id,
+    )
+
+    user.is_active = True
+
+    db_session.add(user)
+    await db_session.flush()
+
+    profile = UserProfileModel(
+        user_id=user.id,
+        username=user.email.split("@")[0],
+    )
+
+    db_session.add(profile)
+
+    await db_session.commit()
+    await db_session.refresh(user)
+
+    return user
+
+
+@pytest_asyncio.fixture(scope="function")
+async def user_client(
+    client: AsyncClient,
+    regular_user: UserModel,
+):
+    app.dependency_overrides[
+        get_current_user
+    ] = lambda: regular_user
+
+    yield client
+
+    app.dependency_overrides.pop(
+        get_current_user,
+        None,
+    )

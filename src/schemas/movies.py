@@ -17,12 +17,12 @@ class MovieBaseSchema(BaseModel):
     name: str
     year: int
     time: int
-    imdb: Decimal
+    imdb: Decimal = Field(ge=0, le=10)
     votes: int = 0
     meta_score: int | None = None
     gross: Decimal | None = None
     description: str
-    price: Decimal
+    price: Decimal = Field(ge=0)
 
 
 class MovieCreateRequestSchema(MovieBaseSchema):
