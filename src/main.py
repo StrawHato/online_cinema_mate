@@ -10,10 +10,12 @@ from src.routes import (
     order_router,
     payment_router,
 )
+from src.config.lifespan import lifespan
 
 app = FastAPI(
     title="Online Cinema Mate",
     description="A FastApi application for purchasing and watching movies online.",
+    lifespan=lifespan,
 )
 
 api_version_prefix = "/api/v1"
