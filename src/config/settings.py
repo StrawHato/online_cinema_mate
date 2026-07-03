@@ -30,8 +30,8 @@ class Settings(BaseSettings):
 
     EMAIL_HOST: str = "mailhog"
     EMAIL_PORT: int = 1025
-    EMAIL_HOST_USER: str = ""
-    EMAIL_HOST_PASSWORD: str = ""
+    EMAIL_HOST_USER: str
+    EMAIL_HOST_PASSWORD: str
     EMAIL_USE_TLS: bool = False
 
     SECRET_KEY_ACCESS: str
