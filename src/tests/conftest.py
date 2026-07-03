@@ -217,6 +217,15 @@ async def admin_user(
 
     db_session.add(admin)
 
+    await db_session.flush()
+
+    profile = UserProfileModel(
+        user_id=admin.id,
+        username=admin.email.split("@")[0],
+    )
+
+    db_session.add(profile)
+
     await db_session.commit()
 
     result = await db_session.execute(

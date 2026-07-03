@@ -1512,7 +1512,7 @@ async def test_create_comment_success(
     assert body["replies_count"] == 0
     assert body["is_liked"] is False
     assert body["is_edited"] is False
-    assert body["author"]["username"] == "user"
+    assert body["author"]["username"] == "admin"
 
 
 @pytest.mark.integration
