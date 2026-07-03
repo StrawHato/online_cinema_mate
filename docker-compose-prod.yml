@@ -1,0 +1,109 @@
+services:
+
+  backend:
+    build: .
+    container_name: online_cinema_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: sh scripts/run_web_server_prod.sh
+    expose:
+      - "8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+      mailhog:
+        condition: service_started
+
+  alembic:
+    build: .
+    container_name: online_cinema_alembic
+    env_file:
+      - .env
+    command: >
+      sh -c "
+      python scripts/wait_for_db.py &&
+      alembic upgrade head &&
+      python -m src.database.seed
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  celery_worker:
+    build: .
+    container_name: online_cinema_celery
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: celery -A src.celery_app worker --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  postgres:
+    image: postgres:16
+    container_name: online_cinema_postgres
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: online_cinema_redis
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: online_cinema_mailhog
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio
+    container_name: online_cinema_minio
+    command: server /data --console-address ":9001"
+    env_file:
+      - .env
+    restart: unless-stopped
+    volumes:
+      - minio_data:/data
+
+  minio_init:
+    image: minio/mc
+    container_name: online_cinema_minio_init
+    env_file:
+      - .env
+    volumes:
+      - ./scripts:/scripts
+    entrypoint: sh /scripts/setup_minio.sh
+    depends_on:
+      - minio
+
+  nginx:
+    build:
+      context: ./nginx
+    container_name: online_cinema_nginx
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+
+volumes:
+  postgres_data:
+  minio_data:

@@ -1,7 +1,5 @@
 from functools import lru_cache
 
-from fastapi import Depends
-
 from src.notifications import EmailSenderInterface
 from src.notifications.emails import EmailSender
 from src.config.settings import get_settings, Settings
@@ -45,9 +43,10 @@ def get_accounts_email_notificator() -> EmailSenderInterface:
     )
 
 
-def get_storage(
-    settings: Settings = Depends(get_settings),
-) -> StorageInterface:
+@lru_cache
+def get_storage() -> StorageInterface:
+    settings = get_settings()
+
     return S3Storage(
         endpoint_url=settings.S3_ENDPOINT,
         access_key=settings.S3_ACCESS_KEY,

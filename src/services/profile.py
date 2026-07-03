@@ -48,6 +48,7 @@ class ProfileService:
 
         data = profile_data.model_dump(
             exclude_unset=True,
+            exclude_none=True,
             exclude={"avatar"},
         )
 
