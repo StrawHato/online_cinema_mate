@@ -6,7 +6,6 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite+aiosqlite:///online_cinema.db"
     LOGIN_TIME_DAYS: int = 7
 
     BASE_DIR: Path = Path(__file__).parent.parent
@@ -23,17 +22,23 @@ class Settings(BaseSettings):
     COMMENT_REPLY_EMAIL_TEMPLATE_NAME: str = "comment_reply_email.html"
     COMMENT_LIKE_EMAIL_TEMPLATE_NAME: str = "comment_like_email.html"
 
-    EMAIL_HOST: str = os.getenv("EMAIL_HOST", "localhost")
-    EMAIL_PORT: int = int(os.getenv("EMAIL_PORT", 1025))
-    EMAIL_HOST_USER: str = os.getenv("EMAIL_HOST_USER", "testuser")
-    EMAIL_HOST_PASSWORD: str = os.getenv("EMAIL_HOST_PASSWORD", "test_password")
-    EMAIL_USE_TLS: bool = os.getenv("EMAIL_USE_TLS", "False").lower() == "true"
+    POSTGRES_DB: str
+    POSTGRES_DB_PORT: int = 5432
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_HOST: str
+
+    EMAIL_HOST: str = "mailhog"
+    EMAIL_PORT: int = 1025
+    EMAIL_HOST_USER: str = ""
+    EMAIL_HOST_PASSWORD: str = ""
+    EMAIL_USE_TLS: bool = False
 
     SECRET_KEY_ACCESS: str
     SECRET_KEY_REFRESH: str
-    JWT_SIGNING_ALGORITHM: str = os.getenv("JWT_SIGNING_ALGORITHM", "HS256")
+    JWT_SIGNING_ALGORITHM: str = "HS256"
 
-    REDIS_HOST: str = "localhost"
+    REDIS_HOST: str
     REDIS_PORT: int = 6379
 
     S3_HOST: str
@@ -48,10 +53,7 @@ class Settings(BaseSettings):
     STRIPE_SUCCESS_URL: str
     STRIPE_CANCEL_URL: str
 
-    BACKEND_URL: str = os.getenv(
-        "BACKEND_URL",
-        "http://127.0.0.1:8000"
-    )
+    BACKEND_URL: str = "http://127.0.0.1:8000"
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -64,7 +66,16 @@ class Settings(BaseSettings):
 
     @property
     def S3_ENDPOINT(self) -> str:
-        return f"{self.S3_HOST}:{self.S3_PORT}"
+        return f"http://{self.S3_HOST}:{self.S3_PORT}"
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return (
+            f"postgresql+asyncpg://"
+            f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+            f"@{self.POSTGRES_HOST}:{self.POSTGRES_DB_PORT}/"
+            f"{self.POSTGRES_DB}"
+        )
 
 
 @lru_cache
