@@ -91,6 +91,7 @@ class MovieRatingSummarySchema(BaseModel):
 class MovieUserRatingSchema(BaseModel):
     rating: int | None
 
+
 class MovieCommentAuthorSchema(BaseModel):
     username: str
 
