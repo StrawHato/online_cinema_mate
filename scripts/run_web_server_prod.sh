@@ -1,6 +1,9 @@
 #!/bin/sh
 
-# Running Gunicorn with Uvicorn workers
+set -e
+
+python scripts/wait_for_db.py
+
 exec gunicorn src.main:app \
     --workers 4 \
     --worker-class uvicorn.workers.UvicornWorker \
