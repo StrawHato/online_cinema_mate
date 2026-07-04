@@ -1,0 +1,63 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry
+
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+
+      - name: Start Docker services
+        run: docker compose -f docker-compose-dev.yml up -d
+
+      - name: Show running containers
+        run: docker ps
+
+      - name: Wait for backend
+        run: |
+          for i in {1..30}; do
+            if curl --silent --fail http://localhost:8000/docs > /dev/null; then
+              echo "Backend is ready!"
+              exit 0
+            fi
+
+            echo "Waiting for backend..."
+            sleep 2
+          done
+
+          echo "Backend failed to start"
+          docker compose -f docker-compose-dev.yml logs
+          exit 1
+
+      - name: Run tests
+        run: poetry run pytest src/tests
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose -f docker-compose-dev.yml logs
+
+      - name: Stop Docker services
+        if: always()
+        run: docker compose -f docker-compose-dev.yml down -v
