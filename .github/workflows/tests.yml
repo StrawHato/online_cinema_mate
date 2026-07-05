@@ -29,6 +29,9 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-interaction --no-root
 
+      - name: Create .env from sample
+        run: cp .env.sample .env
+
       - name: Start Docker services
         run: docker compose -f docker-compose-dev.yml up -d
 
