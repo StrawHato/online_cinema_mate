@@ -156,7 +156,7 @@ https://docs.google.com/document/d/1WALBuKEwngC0CzORHeiTlB-a02esxu-C9ufewacl1Fo/
 
 ### 📸 GitHub Actions Screenshot
 
-> I'll replace this text placeholder with a screenshot of completed CI/CD tasks.
+<img width="1284" height="250" alt="image" src="https://github.com/user-attachments/assets/d5cb257b-c62b-4ea0-abfe-2122b33433ba" />
 
 
 ------------------------------------------------------------------------
