@@ -1,0 +1,36 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+
+          script: |
+            cd ~/online_cinema_mate
+
+            git fetch origin
+            git pull origin ${{ github.ref_name }}
+
+            sed -i "s/^NGINX_BASIC_AUTH_USER=.*/NGINX_BASIC_AUTH_USER=${{ secrets.NGINX_BASIC_AUTH_USER }}/" .env
+            sed -i "s/^NGINX_BASIC_AUTH_PASSWORD=.*/NGINX_BASIC_AUTH_PASSWORD=${{ secrets.NGINX_BASIC_AUTH_PASSWORD }}/" .env
+
+            docker compose -f docker-compose-prod.yml pull || true
+
+            docker compose -f docker-compose-prod.yml up -d --build --remove-orphans
+
+            docker image prune -f
+
+            docker ps

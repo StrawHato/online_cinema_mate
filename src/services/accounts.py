@@ -71,8 +71,8 @@ class AccountsService:
 
     @staticmethod
     async def register(
-        user_data: UserRegistrationRequestSchema,
-        db: AsyncSession,
+            user_data: UserRegistrationRequestSchema,
+            db: AsyncSession,
     ) -> UserRegistrationResponseSchema:
 
         stmt = select(UserModel).where(UserModel.email == user_data.email)
@@ -162,10 +162,8 @@ class AccountsService:
         now_utc = datetime.now(timezone.utc)
 
         if (
-                not token_record
-                or cast(datetime, token_record.expires_at).replace(
-            tzinfo=timezone.utc
-        ) < now_utc
+                not token_record or cast(datetime, token_record.expires_at)
+                .replace(tzinfo=timezone.utc) < now_utc
         ):
             if token_record:
                 await db.delete(token_record)

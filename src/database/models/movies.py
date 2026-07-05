@@ -254,7 +254,7 @@ class MovieModel(Base):
     )
 
     imdb: Mapped[Decimal] = mapped_column(
-        Numeric(3,1),
+        Numeric(3, 1),
         nullable=False,
         index=True,
     )

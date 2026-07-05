@@ -52,6 +52,7 @@ def send_activation_complete_email_task(
         )
     )
 
+
 @celery_app.task(
     autoretry_for=(
         aiosmtplib.SMTPException,
