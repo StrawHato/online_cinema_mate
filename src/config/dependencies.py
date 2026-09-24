@@ -63,5 +63,6 @@ def get_stripe_service() -> StripeService:
         secret_key=settings.STRIPE_SECRET_KEY,
         webhook_secret=settings.STRIPE_WEBHOOK_SECRET,
         success_url=settings.STRIPE_SUCCESS_URL,
-        cancel_url=settings.STRIPE_CANCEL_URL,
+        cancel_url=f"{settings.BACKEND_URL.rstrip('/')}/api/v1/payments/cancel/",
+        frontend_url=settings.FRONTEND_URL,
     )

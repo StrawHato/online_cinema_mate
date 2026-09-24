@@ -8,7 +8,8 @@ from fastapi import (
     status,
     Query
 )
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+from urllib.parse import urlencode
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -122,7 +123,7 @@ async def payment_success() -> HTMLResponse:
 async def payment_cancel(
     payment_uuid: str | None = None,
     db: AsyncSession = Depends(get_db),
-) -> HTMLResponse:
+) -> RedirectResponse:
 
     if payment_uuid is not None:
         await PaymentService.cancel_payment(
@@ -130,39 +131,13 @@ async def payment_cancel(
             db=db,
         )
 
-    return HTMLResponse(
-        """
-        <html>
-            <head>
-                <title>Payment Cancelled</title>
-            </head>
-            <body style="
-                font-family: Arial, sans-serif;
-                text-align: center;
-                margin-top: 80px;
-            ">
-                <h1 style="color:#d32f2f;">
-                    ❌ Payment Cancelled
-                </h1>
+    from src.config.settings import get_settings
 
-                <p>
-                    Your payment was cancelled.
-                </p>
-
-                <p>
-                    No money has been charged.
-                </p>
-
-                <p>
-                    Please try again or use a different payment method if the problem persists.
-                </p>
-
-                <p>
-                    You may now safely close this page.
-                </p>
-            </body>
-        </html>
-        """
+    frontend_url = get_settings().FRONTEND_URL.rstrip("/")
+    query = urlencode({"payment": "cancelled", **({"payment_uuid": payment_uuid} if payment_uuid else {})})
+    return RedirectResponse(
+        url=f"{frontend_url}/orders?{query}",
+        status_code=status.HTTP_303_SEE_OTHER,
     )
 
 

@@ -1,4 +1,5 @@
 from decimal import Decimal
+from urllib.parse import urlencode, urlsplit, urlunsplit, parse_qsl
 
 import stripe
 from stripe import (
@@ -20,12 +21,21 @@ class StripeService:
         webhook_secret: str,
         success_url: str,
         cancel_url: str,
+        frontend_url: str,
     ):
         stripe.api_key = secret_key
 
         self.webhook_secret = webhook_secret
         self.success_url = success_url
         self.cancel_url = cancel_url
+        self.frontend_url = frontend_url.rstrip("/")
+
+    @staticmethod
+    def _with_query(url: str, **params: str) -> str:
+        parts = urlsplit(url)
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+        query.update(params)
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), parts.fragment))
 
     def create_checkout_session(
         self,
@@ -62,10 +72,14 @@ class StripeService:
                         "user_id": str(current_user.id),
                     }
                 },
-                success_url=self.success_url,
-                cancel_url=(
-                    f"{self.cancel_url}"
-                    f"?payment_uuid={payment.uuid}"
+                success_url=self._with_query(
+                    f"{self.frontend_url}/orders",
+                    payment="success",
+                    payment_uuid=payment.uuid,
+                ),
+                cancel_url=self._with_query(
+                    self.cancel_url,
+                    payment_uuid=payment.uuid,
                 ),
             )
 

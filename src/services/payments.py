@@ -215,6 +215,7 @@ class PaymentService:
 
         return CheckoutResponseSchema(
             checkout_url=checkout_url,
+            payment_uuid=payment.uuid,
         )
 
     @staticmethod
