@@ -465,6 +465,5 @@ async def test_payment_cancel_page(
         f"{PAYMENTS_URL}cancel/",
     )
 
-    assert response.status_code == 200
-
-    assert "cancel" in response.text.lower()
+    assert response.status_code == 303
+    assert "/orders?payment=cancelled" in response.headers["location"]
