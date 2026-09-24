@@ -46,3 +46,4 @@ class PaymentListResponseSchema(BaseModel):
 
 class CheckoutResponseSchema(BaseModel):
     checkout_url: str
+    payment_uuid: str

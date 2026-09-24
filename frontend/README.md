@@ -16,6 +16,18 @@ Vite proxies `/api` to the local API, so development does not need a CORS change
 
 Run `npm run build`; the production assets are written to `dist/`. `npm run preview` serves that build locally.
 
+## Stripe payments in local development
+
+Stripe redirects the browser back to `/orders` after checkout. The order is marked as paid only after the backend receives Stripe's signed webhook; the orders page checks the payment status while that confirmation is arriving.
+
+For local test payments, install and authenticate the [Stripe CLI](https://docs.stripe.com/stripe-cli), then run this in a separate terminal:
+
+```sh
+stripe listen --forward-to localhost:8000/api/v1/payments/webhook/
+```
+
+Copy the `whsec_...` value printed by the CLI to `STRIPE_WEBHOOK_SECRET` in the backend `.env`, then restart the API. Keep `stripe listen` running while testing. The webhook secret from the Stripe dashboard is different from the CLI forwarding secret.
+
 ## API coverage
 
 - Movie catalog, search, genre filter, sorting, pagination and detail pages
