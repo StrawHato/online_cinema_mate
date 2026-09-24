@@ -266,7 +266,7 @@ class MovieModel(Base):
     )
 
     average_rating: Mapped[Decimal] = mapped_column(
-        Numeric(3, 2),
+        Numeric(4, 2),
         default=0,
         nullable=False,
     )
