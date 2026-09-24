@@ -161,8 +161,30 @@ function ProfilePage({ toast }: { toast: (s: string) => void }) {
 }
 
 function OrdersPage() {
+  const [params] = useSearchParams()
+  const paymentUuid = params.get('payment_uuid')
+  const paymentResult = params.get('payment')
+  const qc = useQueryClient()
+  const payment = useQuery({
+    queryKey: ['payment', paymentUuid],
+    queryFn: () => shopApi.getPayment(paymentUuid!),
+    enabled: paymentResult === 'success' && !!paymentUuid,
+    refetchInterval: (query) => ['successful', 'canceled', 'refunded'].includes(query.state.data?.status || '') || query.state.dataUpdateCount >= 30 || query.state.failureCount >= 10 ? false : 2000,
+  })
   const q = useQuery({ queryKey: ['orders'], queryFn: shopApi.getOrders })
-  return <section className="subpage"><PageIntro kicker="YOUR CINEMA JOURNEY" title={<>История <em>заказов</em></>} description="Все истории, которые вы забрали с собой." />{q.isPending ? <MovieSkeleton /> : q.isError ? <ErrorState message={shortError(q.error)} /> : q.data.items.length ? <div className="orders-list">{q.data.items.map((o) => <article className="order-card" key={o.uuid}><div className="order-head"><div><small>ЗАКАЗ <span>#{o.uuid.slice(0, 8).toUpperCase()}</span></small><time>{new Date(o.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</time></div><span className={`order-status status-${o.status.toLowerCase()}`}>{o.status}</span></div><div className="order-films">{o.items.map((item) => <Link key={item.id} to={`/movie/${item.movie.uuid}`} className="order-film"><span className="order-film-icon"><Film size={16} /></span><span><strong>{item.movie.name}</strong><small>{item.movie.year}</small></span><b>{money(Number(item.price_at_order))}</b></Link>)}</div><div className="order-total"><span>Итого</span><strong>{money(Number(o.total_amount))}</strong></div></article>)}</div> : <EmptyState title="История только начинается" detail="Ваши заказы появятся здесь после первой покупки." action={() => window.location.assign('/')} />}</section>
+  useEffect(() => {
+    if (payment.data?.status === 'successful') qc.invalidateQueries({ queryKey: ['orders'] })
+  }, [payment.data?.status, qc])
+  const paymentNotice = paymentResult === 'cancelled'
+    ? <div className="inline-error" role="status">Payment was cancelled. Your order remains unpaid.</div>
+    : paymentResult === 'success' && payment.data?.status === 'successful'
+      ? <div className="inline-success" role="status">Payment confirmed. Your order is now paid.</div>
+      : paymentResult === 'success' && payment.data?.status === 'canceled'
+        ? <div className="inline-error" role="status">This payment was cancelled. You can retry checkout from your cart.</div>
+      : paymentResult === 'success'
+        ? <div className="inline-success" role="status">Payment submitted. Waiting for Stripe to confirm it…</div>
+        : null
+  return <section className="subpage"><PageIntro kicker="YOUR CINEMA JOURNEY" title={<>Order <em>history</em></>} description="Every story you have brought home." />{paymentNotice}{payment.isError && <ErrorState message="We could not check the payment status. Refresh this page in a moment." />}{q.isPending ? <MovieSkeleton /> : q.isError ? <ErrorState message={shortError(q.error)} /> : q.data.items.length ? <div className="orders-list">{q.data.items.map((o) => <article className="order-card" key={o.uuid}><div className="order-head"><div><small>ORDER <span>#{o.uuid.slice(0, 8).toUpperCase()}</span></small><time>{new Date(o.created_at).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}</time></div><span className={`order-status status-${o.status.toLowerCase()}`}>{o.status}</span></div><div className="order-films">{o.items.map((item) => <Link key={item.id} to={`/movie/${item.movie.uuid}`} className="order-film"><span className="order-film-icon"><Film size={16} /></span><span><strong>{item.movie.name}</strong><small>{item.movie.year}</small></span><b>{money(Number(item.price_at_order))}</b></Link>)}</div><div className="order-total"><span>Total</span><strong>{money(Number(o.total_amount))}</strong></div></article>)}</div> : <EmptyState title="Your order history is empty" detail="Your orders will appear here after your first purchase." action={() => window.location.assign('/')} />}</section>
 }
 
 function PageIntro({ kicker, title, description }: { kicker: string; title: React.ReactNode; description: string }) { return <div className="page-intro"><div className="eyebrow"><span className="eyebrow-line" /> {kicker}</div><h1>{title}</h1><p>{description}</p></div> }
