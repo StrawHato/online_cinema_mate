@@ -72,12 +72,15 @@ services:
     restart: unless-stopped
 
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    image: rustfs/rustfs:1.0.0-rc.6
     container_name: online_cinema_minio
-    command: server /data --console-address ":9001"
+    command: /data
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env}
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set in .env}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set in .env}
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: "true"
     env_file:
       - .env
     restart: unless-stopped
@@ -85,13 +88,11 @@ services:
       - minio_data:/data
 
   minio_init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
+    build: .
     container_name: online_cinema_minio_init
     env_file:
       - .env
-    volumes:
-      - ./scripts:/scripts
-    entrypoint: sh /scripts/setup_minio.sh
+    command: python scripts/setup_storage.py
     depends_on:
       - minio
 
