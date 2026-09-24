@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import File, Form, UploadFile
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from src.database.models.accounts import GenderEnum
+from src.database.models.accounts import GenderEnum, UserGroupEnum
 from src.validation.profile import (
     validate_birth_date,
     validate_image,
@@ -114,5 +114,6 @@ class ProfileResponseSchema(BaseModel):
     date_of_birth: date | None
     info: str | None
     avatar: str | None
+    group: UserGroupEnum = UserGroupEnum.USER
 
     model_config = ConfigDict(from_attributes=True)

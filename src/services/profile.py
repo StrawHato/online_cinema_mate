@@ -32,8 +32,8 @@ class ProfileService:
     async def get_profile(
         current_user: UserModel,
     ) -> ProfileResponseSchema:
-        return ProfileResponseSchema.model_validate(
-            current_user.profile,
+        return ProfileResponseSchema.model_validate(current_user.profile).model_copy(
+            update={"group": current_user.group.name},
         )
 
     @staticmethod
@@ -92,6 +92,6 @@ class ProfileService:
 
         await db.commit()
 
-        return ProfileResponseSchema.model_validate(
-            profile,
+        return ProfileResponseSchema.model_validate(profile).model_copy(
+            update={"group": current_user.group.name},
         )
