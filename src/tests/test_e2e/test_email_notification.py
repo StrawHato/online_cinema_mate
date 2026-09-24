@@ -76,7 +76,7 @@ async def test_account_activation_sends_completion_email(
     html = activation_message["Content"]["Body"]
 
     token = re.search(
-        r"/activate/([A-Za-z0-9_\-]+)",
+        r"token=([A-Za-z0-9_\-]+)",
         html,
     ).group(1)
 
@@ -133,7 +133,7 @@ async def test_password_reset_request_sends_email(
     )
 
     token = re.search(
-        r"/activate/([A-Za-z0-9_\-]+)",
+        r"token=([A-Za-z0-9_\-]+)",
         activation_message["Content"]["Body"],
     ).group(1)
 
@@ -203,7 +203,7 @@ async def test_password_reset_complete_sends_email(
     )
 
     activation_token = re.search(
-        r"/activate/([A-Za-z0-9_\-]+)",
+        r"token=([A-Za-z0-9_\-]+)",
         activation_message["Content"]["Body"],
     ).group(1)
 

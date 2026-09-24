@@ -43,7 +43,7 @@ async def test_avatar_upload_to_minio(
     )
 
     activation_token = re.search(
-        r"/activate/([A-Za-z0-9_\-]+)",
+        r"token=([A-Za-z0-9_\-]+)",
         activation_message["Content"]["Body"],
     ).group(1)
 
