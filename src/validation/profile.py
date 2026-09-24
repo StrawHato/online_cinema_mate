@@ -8,8 +8,9 @@ from fastapi import UploadFile
 from src.database.models.accounts import GenderEnum
 
 
-def validate_name(name: str):
-    if re.search(r'^[A-Za-z]*$', name) is None:
+def validate_name(name: str, *, username: bool = False):
+    pattern = r"[A-Za-z0-9_.+\-]*" if username else r"[A-Za-z]*"
+    if re.fullmatch(pattern, name) is None:
         raise ValueError(f'{name} contains non-english letters')
 
 

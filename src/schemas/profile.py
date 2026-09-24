@@ -30,7 +30,7 @@ class BaseProfileSchema(BaseModel):
         if value is None:
             return value
 
-        validate_name(value)
+        validate_name(value, username=True)
 
         return value.strip()
 
