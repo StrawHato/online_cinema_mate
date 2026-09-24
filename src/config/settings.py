@@ -54,6 +54,7 @@ class Settings(BaseSettings):
     STRIPE_CANCEL_URL: str
 
     BACKEND_URL: str = "http://127.0.0.1:8000"
+    FRONTEND_URL: str = "http://localhost:5173"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import cast
+from urllib.parse import urlencode
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, delete
@@ -129,8 +130,8 @@ class AccountsService:
             ) from e
 
         activation_link = (
-            f"{get_settings().BACKEND_URL}"
-            f"/api/v1/accounts/activate/{activation_token.token}"
+            f"{get_settings().FRONTEND_URL}/activate?"
+            f"{urlencode({'email': new_user.email, 'token': activation_token.token})}"
         )
 
         send_activation_email_task.delay(
@@ -544,8 +545,8 @@ class AccountsService:
         await db.refresh(activation_token)
 
         activation_link = (
-            f"{get_settings().BACKEND_URL}"
-            f"/api/v1/accounts/activate/{activation_token.token}"
+            f"{get_settings().FRONTEND_URL}/activate?"
+            f"{urlencode({'email': user.email, 'token': activation_token.token})}"
         )
 
         send_activation_email_task.delay(
