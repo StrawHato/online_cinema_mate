@@ -8,6 +8,7 @@ from src.database.session import AsyncSessionLocal
 
 async def seed_user_groups() -> None:
     async with AsyncSessionLocal() as session:
+        created = False
         for group in UserGroupEnum:
             existing_group = await session.scalar(
                 select(UserGroupModel).where(
