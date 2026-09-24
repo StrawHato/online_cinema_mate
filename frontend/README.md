@@ -23,5 +23,6 @@ Run `npm run build`; the production assets are written to `dist/`. `npm run prev
 - Favorites, ratings and comments
 - Profile read/update, cart, order creation and Stripe checkout redirect
 - Order history
+- Profile avatar upload to MinIO and an administrator workspace for adding films, genres and cast members
 
-The current movie response schema does not include a poster image URL. Until the backend exposes one, the UI uses editorial cinema stills from Unsplash. Query and account data always comes from the API.
+The current movie response schema does not include a poster image URL. Until the backend exposes one, the UI uses editorial cinema stills from Unsplash. Query and account data always comes from the API. Set `VITE_S3_PUBLIC_URL` to the browser-reachable MinIO bucket URL to display uploaded avatars; for the local compose setup this is `http://localhost:9000/online-cinema`.
