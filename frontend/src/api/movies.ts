@@ -10,4 +10,4 @@ export const toggleFavorite = async (uuid: string, isFavorite: boolean) => api({
 export const rateMovie = async (uuid: string, rating: number) => api.post(`/movies/${uuid}/rating/`, { rating })
 export const getComments = async (uuid: string) => (await api.get<Page<Comment>>(`/movies/${uuid}/comments/`)).data
 export interface Comment { uuid: string; text: string; author: { username: string }; likes_count: number; replies_count: number; is_edited: boolean; is_liked: boolean; parent_comment_uuid: string | null; created_at: string; updated_at: string; replies: Comment[] }
-export const postComment = async (uuid: string, text: string) => api.post(`/movies/${uuid}/comments/`, { text })
+export const postComment = async (uuid: string, text: string, parentCommentUuid?: string) => api.post(`/movies/${uuid}/comments/`, { text, ...(parentCommentUuid ? { parent_comment_uuid: parentCommentUuid } : {}) })
