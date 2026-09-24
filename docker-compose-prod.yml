@@ -72,7 +72,7 @@ services:
     restart: unless-stopped
 
   minio:
-    image: minio/minio
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: online_cinema_minio
     command: server /data --console-address ":9001"
     environment:
@@ -85,7 +85,7 @@ services:
       - minio_data:/data
 
   minio_init:
-    image: minio/mc
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     container_name: online_cinema_minio_init
     env_file:
       - .env
